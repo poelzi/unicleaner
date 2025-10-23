@@ -1,0 +1,77 @@
+# Unicleaner Configuration File
+# This file configures Unicode character detection rules for your codebase
+
+# Global Settings
+[global]
+# Deny-by-default security model: only explicitly allowed characters pass
+# Recommended: true for maximum security
+deny_by_default = true
+
+# Language-Specific Presets
+# Map file extensions to built-in language presets
+# Available presets: rust, javascript, typescript, python, java, c, cpp, go, ruby, php
+
+[languages.rs]
+preset = "rust"
+
+[languages.js]
+preset = "javascript"
+
+[languages.ts]
+preset = "typescript"
+
+[languages.py]
+preset = "python"
+
+[languages.java]
+preset = "java"
+
+[languages.go]
+preset = "go"
+
+# File-Specific Rules
+# Rules are applied in priority order (more specific patterns have higher priority)
+# Use glob patterns: *.rs, src/**/*.js, path/to/file.txt
+
+# Example: Allow extended Unicode in documentation
+[[rules]]
+pattern = "docs/**/*.md"
+allowed_ranges = [
+    [0x0000, 0x007F],  # Basic Latin (ASCII)
+    [0x0080, 0x00FF],  # Latin-1 Supplement
+    [0x0100, 0x017F],  # Latin Extended-A
+    [0x2000, 0x206F],  # General Punctuation (including smart quotes)
+    [0x2190, 0x21FF],  # Arrows
+]
+
+# Example: Very strict rules for security-critical code
+[[rules]]
+pattern = "src/auth/**/*.rs"
+allowed_ranges = [
+    [0x0020, 0x007E],  # ASCII printable only
+    [0x0009, 0x000D],  # Tab, newline, carriage return
+]
+
+# Example: Allow legacy files with specific denied characters
+[[rules]]
+pattern = "src/legacy/*.js"
+allowed_ranges = [
+    [0x0000, 0xFFFF],  # Allow all BMP
+]
+denied_characters = [
+    0x200B,  # Zero-width space
+    0x200C,  # Zero-width non-joiner
+    0x200D,  # Zero-width joiner
+    0xFEFF,  # Zero-width no-break space
+    0x202A,  # Left-to-right embedding
+    0x202B,  # Right-to-left embedding
+    0x202C,  # Pop directional formatting
+    0x202D,  # Left-to-right override
+    0x202E,  # Right-to-left override (Trojan Source)
+]
+
+# Notes:
+# - Rules are matched by priority (exact paths > specific globs > wildcards)
+# - File-specific rules override language presets
+# - Language presets override global settings
+# - Deny-by-default is the recommended security posture

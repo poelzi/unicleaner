@@ -128,15 +128,15 @@
 
 ### Implementation for User Story 2
 
-- [ ] T060 [P] [US2] Implement LanguagePreset struct and built-in presets in src/config/presets.rs
-- [ ] T061 [P] [US2] Implement FileRule struct and pattern matching in src/config/rules.rs
-- [ ] T062 [P] [US2] Implement Configuration struct in src/config/mod.rs
-- [ ] T063 [US2] Implement TOML parsing with serde in src/config/parser.rs
-- [ ] T064 [US2] Implement config validation logic in src/config/validation.rs
-- [ ] T065 [US2] Add --config flag to CLI arguments in src/cli/args.rs
+- [x] T060 [P] [US2] Implement LanguagePreset struct and built-in presets in src/config/presets.rs
+- [x] T061 [P] [US2] Implement FileRule struct and pattern matching in src/config/rules.rs
+- [x] T062 [P] [US2] Implement Configuration struct in src/config/mod.rs
+- [x] T063 [US2] Implement TOML parsing with serde in src/config/parser.rs
+- [x] T064 [US2] Implement config validation logic in src/config/validation.rs
+- [x] T065 [US2] Add --config flag to CLI arguments in src/cli/args.rs
 - [ ] T066 [US2] Integrate config loading into scanner in src/scanner/file_scanner.rs
 - [ ] T067 [US2] Implement rule application during scanning in src/scanner/unicode_detector.rs
-- [ ] T068 [US2] Create example configuration file in examples/unicleaner.toml
+- [x] T068 [US2] Create example configuration file in examples/unicleaner.toml
 - [ ] T069 [US2] Implement 'init' command to generate default config in src/cli/mod.rs
 - [ ] T070 [US2] Implement 'list-presets' command in src/cli/mod.rs
 - [ ] T071 [US2] Verify all US2 tests pass

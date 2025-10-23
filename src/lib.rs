@@ -4,10 +4,26 @@
 //! Unicode characters including zero-width characters, bidirectional overrides,
 //! homoglyphs, and other security threats.
 //!
+//! # Features
+//!
+//! - **Zero-width character detection**: U+200B, U+200C, U+200D, U+FEFF
+//! - **Bidirectional override detection**: U+202A-U+202E (Trojan Source attacks)
+//! - **Homoglyph detection**: Visually similar characters from different scripts
+//! - **Multi-encoding support**: UTF-8, UTF-16 (LE/BE), UTF-32 (LE/BE)
+//! - **Configurable rules**: TOML-based configuration with language presets
+//! - **Parallel scanning**: Fast multi-threaded file processing
+//!
 //! # Example
 //!
 //! ```no_run
-//! // Library usage will be demonstrated after implementation
+//! use unicleaner::scanner::file_scanner::scan_file;
+//! use std::path::Path;
+//!
+//! // Scan a single file
+//! let violations = scan_file(Path::new("src/main.rs")).unwrap();
+//! for violation in violations {
+//!     println!("Found malicious Unicode at {}:{}", violation.line, violation.column);
+//! }
 //! ```
 
 // Module declarations

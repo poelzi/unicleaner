@@ -56,6 +56,9 @@ predicates = "3"
 # Property-based testing
 proptest = "1"
 
+# Benchmarking
+criterion = "0.5"
+
 # Test utilities
 tempfile = "3"
 
@@ -76,3 +79,7 @@ path = "src/main.rs"
 [lib]
 name = "unicleaner"
 path = "src/lib.rs"
+
+[[bench]]
+name = "scan_performance"
+harness = false

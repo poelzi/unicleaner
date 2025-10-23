@@ -2,7 +2,6 @@
 
 use crate::config::{presets, Configuration};
 use crate::Error;
-use globset::Glob;
 
 /// Validate a configuration
 pub fn validate_config(config: &Configuration) -> Result<(), Error> {

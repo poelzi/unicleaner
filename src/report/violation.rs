@@ -2,10 +2,11 @@
 
 use crate::scanner::encoding::DetectedEncoding;
 use crate::unicode::malicious::{MaliciousCategory, Severity};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// Represents a detected malicious Unicode character
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Violation {
     pub file_path: PathBuf,
     pub line: usize,
@@ -22,6 +23,7 @@ pub struct Violation {
 
 impl Violation {
     /// Create a new violation
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         file_path: PathBuf,
         line: usize,
@@ -73,14 +75,14 @@ impl Violation {
 }
 
 /// Error type for files that couldn't be scanned
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScanError {
     pub file_path: PathBuf,
     pub error_type: ErrorType,
     pub message: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ErrorType {
     IoError,
     EncodingError,

@@ -6,7 +6,6 @@ pub mod rules;
 pub mod validation;
 
 use crate::unicode::ranges::UnicodeRange;
-use presets::LanguagePreset;
 use rules::FileRule;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -52,7 +51,7 @@ impl Configuration {
     /// Merge this configuration with another (other takes precedence)
     pub fn merge(&mut self, other: Configuration) {
         // User config overrides defaults
-        if other.deny_by_default != true {
+        if !other.deny_by_default {
             self.deny_by_default = other.deny_by_default;
         }
 

@@ -1,10 +1,11 @@
 //! File encoding detection and handling
 
 use crate::Result;
-use encoding_rs::{Encoding, UTF_16BE, UTF_16LE};
+use encoding_rs::{UTF_16BE, UTF_16LE};
+use serde::{Deserialize, Serialize};
 
 /// Detected encoding information
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DetectedEncoding {
     Utf8,
     Utf16Le,

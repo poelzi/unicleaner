@@ -4,5 +4,6 @@
 mod integration {
     mod config_tests;
     mod encoding_tests;
+    mod output_tests;
     mod scan_tests;
 }

@@ -1,11 +1,21 @@
 //! CLI argument parsing
 
+use crate::cli::output::ColorMode;
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 #[command(name = "unicleaner")]
-#[command(version, about, long_about = None)]
+#[command(version)]
+#[command(about = "Detect malicious Unicode characters in source code")]
+#[command(
+    long_about = "Unicleaner scans source code for potentially malicious Unicode characters including:\n\
+    - Zero-width characters (U+200B, U+200C, U+200D, U+FEFF)\n\
+    - Bidirectional override characters (U+202A-U+202E) - Trojan Source attacks\n\
+    - Homoglyphs - visually similar characters from different scripts\n\
+    - Non-printable control characters outside standard ASCII range\n\n\
+    Use 'unicleaner <COMMAND> --help' for command-specific help."
+)]
 #[command(author = "unicleaner contributors")]
 pub struct Args {
     #[command(subcommand)]
@@ -19,8 +29,12 @@ pub struct Args {
     #[arg(short = 'f', long, value_enum, default_value = "human", global = true)]
     pub format: OutputFormat,
 
-    /// Disable color output
-    #[arg(long, global = true)]
+    /// Control color output (auto, always, never)
+    #[arg(long, value_enum, default_value = "auto", global = true)]
+    pub color: ColorOption,
+
+    /// Disable color output (deprecated: use --color=never)
+    #[arg(long, global = true, conflicts_with = "color")]
     pub no_color: bool,
 
     /// Show only summary (suppress individual violations)
@@ -30,6 +44,10 @@ pub struct Args {
     /// Show verbose output
     #[arg(short, long, global = true)]
     pub verbose: bool,
+
+    /// Minimum severity level to report (error, warning, info)
+    #[arg(long, value_enum, global = true)]
+    pub severity: Option<SeverityLevel>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -78,6 +96,49 @@ pub enum OutputFormat {
     Github,
     /// GitLab CI format
     Gitlab,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum ColorOption {
+    /// Auto-detect based on TTY and NO_COLOR
+    Auto,
+    /// Always use colors
+    Always,
+    /// Never use colors
+    Never,
+}
+
+impl ColorOption {
+    /// Convert to ColorMode for use in output module
+    pub fn to_color_mode(self) -> ColorMode {
+        match self {
+            Self::Auto => ColorMode::Auto,
+            Self::Always => ColorMode::Always,
+            Self::Never => ColorMode::Never,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum SeverityLevel {
+    /// Only show errors
+    Error,
+    /// Show warnings and errors
+    Warning,
+    /// Show all violations including info
+    Info,
+}
+
+impl SeverityLevel {
+    /// Convert to Severity for use in filtering
+    pub fn to_severity(self) -> crate::unicode::malicious::Severity {
+        use crate::unicode::malicious::Severity;
+        match self {
+            Self::Error => Severity::Error,
+            Self::Warning => Severity::Warning,
+            Self::Info => Severity::Info,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -140,6 +201,15 @@ impl Args {
             jobs: None,
             encoding: None,
         })
+    }
+
+    /// Get the effective color mode, handling the deprecated --no-color flag
+    pub fn get_color_mode(&self) -> ColorMode {
+        if self.no_color {
+            ColorMode::Never
+        } else {
+            self.color.to_color_mode()
+        }
     }
 }
 
@@ -275,5 +345,68 @@ mod tests {
             EncodingOption::Utf32Be.to_detected_encoding(),
             DetectedEncoding::Utf32Be
         );
+    }
+
+    #[test]
+    fn test_color_option_auto() {
+        let args = Args::try_parse_from(vec!["unicleaner", "--color", "auto"]).unwrap();
+        assert!(matches!(args.color, ColorOption::Auto));
+        assert_eq!(args.get_color_mode(), ColorMode::Auto);
+    }
+
+    #[test]
+    fn test_color_option_always() {
+        let args = Args::try_parse_from(vec!["unicleaner", "--color", "always"]).unwrap();
+        assert!(matches!(args.color, ColorOption::Always));
+        assert_eq!(args.get_color_mode(), ColorMode::Always);
+    }
+
+    #[test]
+    fn test_color_option_never() {
+        let args = Args::try_parse_from(vec!["unicleaner", "--color", "never"]).unwrap();
+        assert!(matches!(args.color, ColorOption::Never));
+        assert_eq!(args.get_color_mode(), ColorMode::Never);
+    }
+
+    #[test]
+    fn test_color_option_default() {
+        let args = Args::try_parse_from(vec!["unicleaner"]).unwrap();
+        assert!(matches!(args.color, ColorOption::Auto));
+        assert_eq!(args.get_color_mode(), ColorMode::Auto);
+    }
+
+    #[test]
+    fn test_no_color_flag() {
+        let args = Args::try_parse_from(vec!["unicleaner", "--no-color"]).unwrap();
+        assert!(args.no_color);
+        assert_eq!(args.get_color_mode(), ColorMode::Never);
+    }
+
+    #[test]
+    fn test_color_option_conversion() {
+        assert_eq!(ColorOption::Auto.to_color_mode(), ColorMode::Auto);
+        assert_eq!(ColorOption::Always.to_color_mode(), ColorMode::Always);
+        assert_eq!(ColorOption::Never.to_color_mode(), ColorMode::Never);
+    }
+
+    #[test]
+    fn test_severity_flag() {
+        let args = Args::try_parse_from(vec!["unicleaner", "--severity", "error"]).unwrap();
+        assert!(args.severity.is_some());
+        assert!(matches!(args.severity.unwrap(), SeverityLevel::Error));
+    }
+
+    #[test]
+    fn test_severity_default() {
+        let args = Args::try_parse_from(vec!["unicleaner"]).unwrap();
+        assert!(args.severity.is_none());
+    }
+
+    #[test]
+    fn test_severity_level_conversion() {
+        use crate::unicode::malicious::Severity;
+        assert_eq!(SeverityLevel::Error.to_severity(), Severity::Error);
+        assert_eq!(SeverityLevel::Warning.to_severity(), Severity::Warning);
+        assert_eq!(SeverityLevel::Info.to_severity(), Severity::Info);
     }
 }

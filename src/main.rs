@@ -2,8 +2,10 @@ use std::path::PathBuf;
 use std::process;
 use std::time::Instant;
 use unicleaner::cli::args::{Args, Command, OutputFormat};
+use unicleaner::cli::output::{should_use_color, ColorStream};
 use unicleaner::config::presets;
 use unicleaner::report::formatter::format_human;
+use unicleaner::report::json::{format_json, format_json_compact};
 use unicleaner::report::ScanResult;
 use unicleaner::scanner::git_diff;
 use unicleaner::scanner::parallel::scan_files_parallel;
@@ -128,7 +130,7 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
         .config
         .clone()
         .unwrap_or_else(|| PathBuf::from("unicleaner.toml"));
-    let result = ScanResult {
+    let mut result = ScanResult {
         violations,
         files_scanned,
         files_clean,
@@ -138,8 +140,14 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
         config_used: config_path,
     };
 
+    // Apply severity filtering if specified
+    if let Some(min_severity) = args.severity {
+        result = result.filter_by_severity(min_severity.to_severity());
+    }
+
     // Format and display output
-    let use_color = !args.no_color && supports_color::on(supports_color::Stream::Stdout).is_some();
+    let color_mode = args.get_color_mode();
+    let use_color = should_use_color(color_mode, ColorStream::Stdout);
 
     match args.format {
         OutputFormat::Human => {
@@ -160,19 +168,50 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
             }
         }
         OutputFormat::Json => {
-            // JSON output will be implemented in Phase 6
-            eprintln!("JSON output format not yet implemented");
-            return Ok(2);
+            // Use compact JSON for piping, pretty JSON for interactive use
+            let json_output = if args.quiet {
+                format_json_compact(&result)
+            } else {
+                format_json(&result)
+            };
+
+            match json_output {
+                Ok(json) => println!("{}", json),
+                Err(e) => {
+                    eprintln!("Error formatting JSON output: {}", e);
+                    return Ok(2);
+                }
+            }
         }
         OutputFormat::Github => {
-            // GitHub Actions output will be implemented in Phase 5
-            eprintln!("GitHub Actions output format not yet implemented");
-            return Ok(2);
+            // GitHub Actions output format: ::error file={},line={},col={}::{}
+            for violation in &result.violations {
+                println!(
+                    "::error file={},line={},col={}::{}",
+                    violation.file_path.display(),
+                    violation.line,
+                    violation.column,
+                    violation.message
+                );
+            }
+            if !args.quiet {
+                eprintln!(
+                    "\nScan complete: {} violations found",
+                    result.violations.len()
+                );
+            }
         }
         OutputFormat::Gitlab => {
-            // GitLab CI output will be implemented in Phase 5
-            eprintln!("GitLab CI output format not yet implemented");
-            return Ok(2);
+            // GitLab CI uses JSON format with specific schema
+            // For now, use standard JSON format
+            let json_output = format_json(&result);
+            match json_output {
+                Ok(json) => println!("{}", json),
+                Err(e) => {
+                    eprintln!("Error formatting GitLab output: {}", e);
+                    return Ok(2);
+                }
+            }
         }
     }
 

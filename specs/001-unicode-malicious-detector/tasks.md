@@ -1,6 +1,6 @@
 # Tasks: Unicode Malicious Character Detector
 
-**Input**: Design documents from `/specs/001-unicode-malicious-detector/`  
+**Input**: Design documents from `/specs/001-unicode-malicious-detector/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
 **Tests**: Required per Constitution Principle III (Test-First is NON-NEGOTIABLE)
@@ -182,26 +182,26 @@
 
 ### Tests for User Story 4 ⚠️ WRITE TESTS FIRST
 
-- [ ] T085 [P] [US4] Write unit test for colored output formatting in src/report/formatter.rs
-- [ ] T086 [P] [US4] Write unit test for JSON serialization in src/report/json.rs
-- [ ] T087 [P] [US4] Write unit test for TTY detection in src/cli/output.rs
-- [ ] T088 [P] [US4] Write unit test for NO_COLOR environment variable in src/cli/output.rs
-- [ ] T089 [P] [US4] Write integration test for --json flag in tests/integration/cli_tests.rs
-- [ ] T090 [P] [US4] Write integration test for --color flag in tests/integration/cli_tests.rs
-- [ ] T091 [P] [US4] Write contract test for JSON schema validation in tests/contract/json_schema.rs
+- [x] T085 [P] [US4] Write unit test for colored output formatting in src/report/formatter.rs
+- [x] T086 [P] [US4] Write unit test for JSON serialization in src/report/json.rs
+- [x] T087 [P] [US4] Write unit test for TTY detection in src/cli/output.rs
+- [x] T088 [P] [US4] Write unit test for NO_COLOR environment variable in src/cli/output.rs
+- [x] T089 [P] [US4] Write integration test for --json flag in tests/integration/cli_tests.rs
+- [x] T090 [P] [US4] Write integration test for --color flag in tests/integration/cli_tests.rs
+- [x] T091 [P] [US4] Write contract test for JSON schema validation in tests/contract/json_schema.rs
 
 ### Implementation for User Story 4
 
-- [ ] T092 [US4] Implement human-readable formatter with owo-colors in src/report/formatter.rs
-- [ ] T093 [US4] Implement JSON output serialization in src/report/json.rs
-- [ ] T094 [US4] Implement TTY detection and color control in src/cli/output.rs
-- [ ] T095 [US4] Add --json flag to CLI arguments in src/cli/args.rs
-- [ ] T096 [US4] Add --color flag with auto/always/never options in src/cli/args.rs
-- [ ] T097 [US4] Implement NO_COLOR environment variable support in src/cli/output.rs
-- [ ] T098 [US4] Integrate output formatters into main reporting in src/main.rs
-- [ ] T099 [US4] Add severity level filtering in src/report/mod.rs
-- [ ] T100 [US4] Add --quiet and --verbose flags in src/cli/args.rs
-- [ ] T101 [US4] Verify all US4 tests pass
+- [x] T092 [US4] Implement human-readable formatter with owo-colors in src/report/formatter.rs
+- [x] T093 [US4] Implement JSON output serialization in src/report/json.rs
+- [x] T094 [US4] Implement TTY detection and color control in src/cli/output.rs
+- [x] T095 [US4] Add --json flag to CLI arguments in src/cli/args.rs
+- [x] T096 [US4] Add --color flag with auto/always/never options in src/cli/args.rs
+- [x] T097 [US4] Implement NO_COLOR environment variable support in src/cli/output.rs
+- [x] T098 [US4] Integrate output formatters into main reporting in src/main.rs
+- [x] T099 [US4] Add severity level filtering in src/report/mod.rs
+- [x] T100 [US4] Add --quiet and --verbose flags in src/cli/args.rs
+- [x] T101 [US4] Verify all US4 tests pass
 
 **Checkpoint**: All user stories complete - full feature set implemented
 
@@ -211,25 +211,25 @@
 
 **Purpose**: Final improvements, performance optimization, and documentation
 
-- [ ] T102 [P] Set up fuzzing infrastructure in fuzz/Cargo.toml
-- [ ] T103 [P] Implement fuzz target for Unicode detection in fuzz/fuzz_targets/fuzz_unicode.rs
-- [ ] T104 [P] Implement fuzz target for TOML parsing in fuzz/fuzz_targets/fuzz_config.rs
-- [ ] T105 [P] Implement fuzz target for file scanning in fuzz/fuzz_targets/fuzz_file_scan.rs
-- [ ] T106 [P] Add property-based tests with proptest in tests/unit/
-- [ ] T107 [P] Create performance benchmarks with criterion in benches/scan_performance.rs
-- [ ] T108 Optimize Unicode range lookups with interval trees in src/unicode/ranges.rs
-- [ ] T109 Add memory mapping for large files with memmap2 in src/scanner/file_scanner.rs
-- [ ] T110 Update README.md with full documentation
-- [ ] T111 Add comprehensive --help text in src/cli/args.rs
-- [ ] T112 Add rustdoc comments to all public APIs
-- [ ] T113 Run cargo clippy and fix all warnings
-- [ ] T114 Run cargo fmt to ensure consistent formatting
-- [ ] T115 Run cargo test to verify all tests pass
-- [ ] T116 Run cargo-tarpaulin for code coverage report
-- [ ] T117 Update flake.nix with all checks (test, clippy, fmt)
-- [ ] T118 Test quickstart.md examples for accuracy
-- [ ] T119 Create CHANGELOG.md for version 1.0.0
-- [ ] T120 Final validation: Run full test suite including fuzz tests
+- [x] T102 [P] Set up fuzzing infrastructure in fuzz/Cargo.toml
+- [x] T103 [P] Implement fuzz target for Unicode detection in fuzz/fuzz_targets/fuzz_unicode.rs
+- [x] T104 [P] Implement fuzz target for TOML parsing in fuzz/fuzz_targets/fuzz_config.rs
+- [x] T105 [P] Implement fuzz target for file scanning in fuzz/fuzz_targets/fuzz_file_scan.rs
+- [x] T106 [P] Add property-based tests with proptest in tests/unit/
+- [x] T107 [P] Create performance benchmarks with criterion in benches/scan_performance.rs
+- [x] T108 Optimize Unicode range lookups with interval trees in src/unicode/ranges.rs
+- [x] T109 Add memory mapping for large files with memmap2 in src/scanner/file_scanner.rs
+- [x] T110 Update README.md with full documentation
+- [x] T111 Add comprehensive --help text in src/cli/args.rs
+- [x] T112 Add rustdoc comments to all public APIs
+- [x] T113 Run cargo clippy and fix all warnings
+- [x] T114 Run cargo fmt to ensure consistent formatting
+- [x] T115 Run cargo test to verify all tests pass
+- [x] T116 Run cargo-tarpaulin for code coverage report
+- [x] T117 Update flake.nix with all checks (test, clippy, fmt)
+- [x] T118 Test quickstart.md examples for accuracy
+- [x] T119 Create CHANGELOG.md for version 1.0.0
+- [x] T120 Final validation: Run full test suite including fuzz tests
 
 **Checkpoint**: Feature complete and polished
 

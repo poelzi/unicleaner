@@ -1,7 +1,7 @@
 //! Malicious Unicode pattern definitions
 
 /// Category of malicious Unicode pattern
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum MaliciousCategory {
     ZeroWidth,
     BidiOverride,
@@ -11,7 +11,9 @@ pub enum MaliciousCategory {
 }
 
 /// Severity level for violations
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub enum Severity {
     Info,
     Warning,

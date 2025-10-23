@@ -46,20 +46,67 @@ cargo build --release
 
 ```bash
 # Scan current directory
-unicleaner .
+unicleaner scan .
 
 # Generate default config
 unicleaner init
 
 # Scan with custom config
-unicleaner . --config unicleaner.toml
+unicleaner scan . --config unicleaner.toml
 
-# Scan only Git changes
-unicleaner . --diff
+# Scan only Git changes (for CI/CD)
+unicleaner scan . --diff
 
-# Output JSON for CI
-unicleaner . --json
+# Output JSON for machine parsing
+unicleaner scan . --format json
+
+# Filter by severity level
+unicleaner scan . --severity error
+
+# Control color output
+unicleaner scan . --color always
+unicleaner scan . --color never
+unicleaner scan . --no-color  # deprecated but supported
+
+# Quiet mode (summary only)
+unicleaner scan . --quiet
+
+# Verbose mode (show progress)
+unicleaner scan . --verbose
+
+# List available language presets
+unicleaner list-presets
 ```
+
+## CLI Reference
+
+### Commands
+
+- `scan [PATH]` - Scan files for malicious Unicode (default command)
+- `init [FILE]` - Generate a default configuration file
+- `list-presets` - Show available language presets
+
+### Global Flags
+
+- `-c, --config <FILE>` - Path to configuration file
+- `-f, --format <FORMAT>` - Output format: human, json, github, gitlab (default: human)
+- `--color <WHEN>` - Color output: auto, always, never (default: auto)
+- `--no-color` - Disable color output (deprecated, use --color=never)
+- `-q, --quiet` - Show only summary (suppress individual violations)
+- `-v, --verbose` - Show verbose output with progress messages
+- `--severity <LEVEL>` - Minimum severity to report: error, warning, info
+
+### Scan Flags
+
+- `--diff` - Scan only files changed in Git (requires Git repository)
+- `-j, --jobs <N>` - Number of parallel threads (default: number of CPUs)
+- `--encoding <ENC>` - Force specific encoding: utf8, utf16-le, utf16-be, utf32-le, utf32-be
+
+## Exit Codes
+
+- `0` - Success: No violations found
+- `1` - Violations found
+- `2` - Error: Invalid arguments, file read errors, etc.
 
 ## Documentation
 

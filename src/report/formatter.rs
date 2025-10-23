@@ -90,12 +90,10 @@ fn format_summary(result: &ScanResult, use_color: bool) -> String {
         } else {
             format!("{}", "FAILED".red().bold())
         }
+    } else if result.passed() {
+        "PASSED".to_string()
     } else {
-        if result.passed() {
-            "PASSED".to_string()
-        } else {
-            "FAILED".to_string()
-        }
+        "FAILED".to_string()
     };
 
     output.push_str(&format!("\nScan Result: {}\n", status));

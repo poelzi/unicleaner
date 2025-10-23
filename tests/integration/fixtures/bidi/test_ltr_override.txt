@@ -1,0 +1,6 @@
+This file contains bidirectional text control characters:
+- Left-to-right override: ‭LTR‭ (U+202D)
+- Right-to-left override: ‮RLO‮ (U+202E)
+- Pop directional formatting: ‏PDF‏ (U+202C)
+
+These can alter code meaning visually.

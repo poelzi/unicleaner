@@ -1,0 +1,7 @@
+This file contains various zero-width characters:
+- Zero-width space: ​ (U+200B)
+- Zero-width non-joiner: ‌ (U+200C)
+- Zero-width joiner: ‍ (U+200D)
+- Zero-width no-break space: ﻿ (U+FEFF)
+
+These can hide malicious code.

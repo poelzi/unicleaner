@@ -1,0 +1,5 @@
+This is a clean text file.
+It contains only standard ASCII characters.
+No malicious Unicode here.
+
+Safe for scanning!

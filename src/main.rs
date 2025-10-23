@@ -5,6 +5,7 @@ use unicleaner::cli::args::{Args, Command, OutputFormat};
 use unicleaner::config::presets;
 use unicleaner::report::formatter::format_human;
 use unicleaner::report::ScanResult;
+use unicleaner::scanner::git_diff;
 use unicleaner::scanner::parallel::scan_files_parallel;
 use unicleaner::scanner::walker::{walk_paths, WalkConfig};
 
@@ -47,8 +48,10 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
     let start_time = Instant::now();
 
     // Extract scan parameters from command
-    let (paths, jobs) = match args.get_command() {
-        Command::Scan { paths, jobs, .. } => (paths, jobs),
+    let (paths, jobs, diff) = match args.get_command() {
+        Command::Scan {
+            paths, jobs, diff, ..
+        } => (paths, jobs, diff),
         _ => unreachable!(),
     };
 
@@ -66,15 +69,42 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
         eprintln!("Collecting files to scan...");
     }
 
-    let files = walk_paths(&paths, &walk_config)?;
+    let mut files = walk_paths(&paths, &walk_config)?;
 
-    if args.verbose {
+    // Filter to only changed files if in diff mode
+    if diff {
+        if args.verbose {
+            eprintln!("Diff mode enabled - scanning only changed files...");
+        }
+
+        // Determine repository root (use first path as base)
+        let default_path = PathBuf::from(".");
+        let repo_path = paths.first().unwrap_or(&default_path);
+
+        if !git_diff::is_git_repository(repo_path) {
+            eprintln!("Error: --diff flag requires a Git repository");
+            return Ok(2);
+        }
+
+        files = git_diff::filter_changed_files(files, repo_path)?;
+
+        if args.verbose {
+            eprintln!("Found {} changed files", files.len());
+        }
+    } else if args.verbose {
         eprintln!("Found {} files to scan", files.len());
     }
 
     if files.is_empty() {
-        eprintln!("Warning: No files found to scan");
-        return Ok(0);
+        if diff {
+            if !args.quiet {
+                println!("No changed files to scan");
+            }
+            return Ok(0);
+        } else {
+            eprintln!("Warning: No files found to scan");
+            return Ok(0);
+        }
     }
 
     // Scan files in parallel

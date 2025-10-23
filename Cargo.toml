@@ -23,9 +23,8 @@ serde_json = "1"
 unicode-segmentation = "1.10"
 unicode-normalization = "0.1"
 
-# Git integration (requires system libgit2/openssl)
-# git2 = "0.18"
-# TODO: Enable when building with Nix or system dependencies available
+# Git integration via command-line (no dependencies on libgit2/openssl)
+# Uses the 'git' command which is commonly available in development environments
 
 # Encoding detection
 chardetng = "0.1"

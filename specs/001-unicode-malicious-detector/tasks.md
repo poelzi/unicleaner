@@ -153,22 +153,22 @@
 
 ### Tests for User Story 3 ⚠️ WRITE TESTS FIRST
 
-- [ ] T072 [P] [US3] Write unit test for Git diff detection in src/scanner/git_diff.rs
-- [ ] T073 [P] [US3] Write unit test for changeset file filtering in src/scanner/git_diff.rs
-- [ ] T074 [P] [US3] Write integration test for --diff flag in tests/integration/cli_tests.rs
-- [ ] T075 [P] [US3] Write integration test for Git repository scanning in tests/integration/scan_tests.rs
-- [ ] T076 [P] [US3] Write integration test for CI exit codes in tests/integration/cli_tests.rs
+- [x] T072 [P] [US3] Write unit test for Git diff detection in src/scanner/git_diff.rs
+- [x] T073 [P] [US3] Write unit test for changeset file filtering in src/scanner/git_diff.rs
+- [x] T074 [P] [US3] Write integration test for --diff flag in tests/integration/cli_tests.rs
+- [x] T075 [P] [US3] Write integration test for Git repository scanning in tests/integration/scan_tests.rs
+- [x] T076 [P] [US3] Write integration test for CI exit codes in tests/integration/cli_tests.rs
 
 ### Implementation for User Story 3
 
-- [ ] T077 [US3] Implement Git repository detection with git2 in src/scanner/git_diff.rs
-- [ ] T078 [US3] Implement diff calculation for changed files in src/scanner/git_diff.rs
-- [ ] T079 [US3] Add --diff flag to CLI arguments in src/cli/args.rs
-- [ ] T080 [US3] Integrate diff mode into scanner in src/scanner/mod.rs
-- [ ] T081 [US3] Create GitHub Actions example in examples/github-workflow.yml
-- [ ] T082 [US3] Create GitLab CI example in examples/gitlab-ci.yml
-- [ ] T083 [US3] Handle detached HEAD and staging area in src/scanner/git_diff.rs
-- [ ] T084 [US3] Verify all US3 tests pass
+- [x] T077 [US3] Implement Git repository detection with git2 in src/scanner/git_diff.rs
+- [x] T078 [US3] Implement diff calculation for changed files in src/scanner/git_diff.rs
+- [x] T079 [US3] Add --diff flag to CLI arguments in src/cli/args.rs
+- [x] T080 [US3] Integrate diff mode into scanner in src/scanner/mod.rs
+- [x] T081 [US3] Create GitHub Actions example in examples/github-workflow.yml
+- [x] T082 [US3] Create GitLab CI example in examples/gitlab-ci.yml
+- [x] T083 [US3] Handle detached HEAD and staging area in src/scanner/git_diff.rs
+- [x] T084 [US3] Verify all US3 tests pass
 
 **Checkpoint**: User Stories 1, 2, and 3 complete - full CI/CD integration ready
 

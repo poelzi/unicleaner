@@ -1,0 +1,94 @@
+# GitHub Actions workflow for Unicleaner
+# Scans for malicious Unicode characters in pull requests
+
+name: Unicode Security Scan
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  push:
+    branches: [main, master, develop]
+
+jobs:
+  unicode-scan:
+    name: Scan for Malicious Unicode
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for diff mode
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install Unicleaner
+        run: cargo install --git https://github.com/yourusername/unicleaner
+
+      # Option 1: Scan only changed files (recommended for PRs)
+      - name: Scan changed files
+        if: github.event_name == 'pull_request'
+        run: |
+          unicleaner scan --diff --verbose
+        continue-on-error: false
+
+      # Option 2: Scan entire repository (for push to main)
+      - name: Scan entire repository
+        if: github.event_name == 'push'
+        run: |
+          unicleaner scan . --verbose
+        continue-on-error: false
+
+      # Optional: Upload results as artifact
+      - name: Generate JSON report
+        if: always()
+        run: |
+          unicleaner scan --diff --format json > unicode-scan-results.json || true
+
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: unicode-scan-results
+          path: unicode-scan-results.json
+          retention-days: 30
+
+  # Advanced: Scan with custom configuration
+  unicode-scan-custom:
+    name: Scan with Custom Config
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust and Unicleaner
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          cargo install --git https://github.com/yourusername/unicleaner
+
+      - name: Create custom config
+        run: |
+          cat > unicleaner.toml << 'EOF'
+          deny_by_default = true
+
+          [language_presets]
+          rust = "rust"
+          javascript = "javascript"
+
+          [[file_rules]]
+          pattern = "**/*.rs"
+          priority = 1
+          EOF
+
+      - name: Scan with config
+        run: unicleaner scan --config unicleaner.toml --diff --verbose
+# Exit codes:
+# 0 = No violations found (clean)
+# 1 = Violations found (malicious Unicode detected)
+# 2 = Error occurred (invalid config, not a git repo, etc.)

@@ -73,7 +73,7 @@ fn detect_heuristic(bytes: &[u8]) -> Option<DetectedEncoding> {
         .count();
 
     // UTF-32 has many nulls (3 out of 4 bytes for ASCII)
-    if null_count > 20 {
+    if null_count >= 4 {
         // Check pattern: ASCII in UTF-32 LE has pattern: XX 00 00 00
         if bytes.len() >= 8
             && bytes[1] == 0x00
@@ -100,7 +100,7 @@ fn detect_heuristic(bytes: &[u8]) -> Option<DetectedEncoding> {
     }
 
     // UTF-16 has alternating nulls for ASCII text
-    if null_count > 10 {
+    if null_count >= 2 {
         // Check for UTF-16 LE pattern: XX 00 XX 00
         let mut le_matches = 0;
         for i in (0..bytes.len().min(100)).step_by(2) {
@@ -109,7 +109,7 @@ fn detect_heuristic(bytes: &[u8]) -> Option<DetectedEncoding> {
             }
         }
 
-        if le_matches > 5 {
+        if le_matches >= 2 {
             return Some(DetectedEncoding::Utf16Le);
         }
 
@@ -121,7 +121,7 @@ fn detect_heuristic(bytes: &[u8]) -> Option<DetectedEncoding> {
             }
         }
 
-        if be_matches > 5 {
+        if be_matches >= 2 {
             return Some(DetectedEncoding::Utf16Be);
         }
     }
@@ -193,12 +193,7 @@ fn decode_utf32_be(bytes: &[u8]) -> Result<String> {
 
 /// Detect encoding and convert to UTF-8
 pub fn detect_and_decode(bytes: &[u8]) -> Result<String> {
-    // Try UTF-8 first (fast path)
-    if let Ok(s) = std::str::from_utf8(bytes) {
-        return Ok(s.to_string());
-    }
-
-    // Check for BOM (highest priority)
+    // Check for BOM first (highest priority)
     if let Some(encoding) = detect_bom(bytes) {
         let data = match encoding {
             DetectedEncoding::Utf8 => &bytes[3..], // Skip UTF-8 BOM
@@ -217,15 +212,20 @@ pub fn detect_and_decode(bytes: &[u8]) -> Result<String> {
         };
     }
 
-    // Try heuristic detection
+    // Try heuristic detection for UTF-16/32
     if let Some(encoding) = detect_heuristic(bytes) {
         return match encoding {
             DetectedEncoding::Utf16Le => decode_utf16_le(bytes),
             DetectedEncoding::Utf16Be => decode_utf16_be(bytes),
             DetectedEncoding::Utf32Le => decode_utf32_le(bytes),
             DetectedEncoding::Utf32Be => decode_utf32_be(bytes),
-            DetectedEncoding::Utf8 => unreachable!("UTF-8 handled by fast path"),
+            DetectedEncoding::Utf8 => unreachable!("UTF-8 not returned by heuristic"),
         };
+    }
+
+    // Try UTF-8 (after checking for UTF-16/32 to avoid false positives with nulls)
+    if let Ok(s) = std::str::from_utf8(bytes) {
+        return Ok(s.to_string());
     }
 
     // Fall back to chardetng for other encodings

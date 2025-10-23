@@ -1,5 +1,6 @@
 //! Violation and error reporting structures
 
+use crate::scanner::encoding::DetectedEncoding;
 use crate::unicode::malicious::{MaliciousCategory, Severity};
 use std::path::PathBuf;
 
@@ -16,6 +17,7 @@ pub struct Violation {
     pub category: MaliciousCategory,
     pub severity: Severity,
     pub message: String,
+    pub encoding: DetectedEncoding,
 }
 
 impl Violation {
@@ -43,6 +45,7 @@ impl Violation {
             category,
             severity,
             message,
+            encoding: DetectedEncoding::Utf8, // Default to UTF-8 for backward compatibility
         }
     }
 
@@ -52,9 +55,20 @@ impl Violation {
         self
     }
 
+    /// Set the detected encoding
+    pub fn with_encoding(mut self, encoding: DetectedEncoding) -> Self {
+        self.encoding = encoding;
+        self
+    }
+
     /// Get Unicode code point in U+XXXX format
     pub fn code_point_string(&self) -> String {
         format!("U+{:04X}", self.code_point)
+    }
+
+    /// Get encoding name as a string
+    pub fn encoding_name(&self) -> &'static str {
+        self.encoding.name()
     }
 }
 
@@ -106,6 +120,7 @@ mod tests {
         assert_eq!(violation.code_point, 0x200B);
         assert_eq!(violation.code_point_string(), "U+200B");
         assert_eq!(violation.severity, Severity::Error);
+        assert_eq!(violation.encoding_name(), "UTF-8"); // Default encoding
     }
 
     #[test]
@@ -124,6 +139,40 @@ mod tests {
 
         assert!(!violation.context.is_empty());
         assert!(violation.context.contains("user"));
+    }
+
+    #[test]
+    fn test_violation_with_encoding() {
+        let violation = Violation::new(
+            PathBuf::from("test.rs"),
+            1,
+            1,
+            0x200B,
+            "zero-width-space".to_string(),
+            MaliciousCategory::ZeroWidth,
+            Severity::Error,
+            "Zero-width space detected".to_string(),
+        )
+        .with_encoding(DetectedEncoding::Utf16Le);
+
+        assert_eq!(violation.encoding_name(), "UTF-16 LE");
+    }
+
+    #[test]
+    fn test_violation_with_utf32_encoding() {
+        let violation = Violation::new(
+            PathBuf::from("test.rs"),
+            1,
+            1,
+            0x202E,
+            "bidi-override".to_string(),
+            MaliciousCategory::BidiOverride,
+            Severity::Error,
+            "Bidirectional override detected".to_string(),
+        )
+        .with_encoding(DetectedEncoding::Utf32Be);
+
+        assert_eq!(violation.encoding_name(), "UTF-32 BE");
     }
 
     #[test]

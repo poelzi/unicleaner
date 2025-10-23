@@ -392,15 +392,15 @@ Per Constitution Principle III:
 
 ### Implementation for Encoding Support
 
-- [ ] T133 [ENC] Add encoding_rs crate integration for UTF-16/UTF-32 in Cargo.toml
+- [x] T133 [ENC] Add encoding_rs crate integration for UTF-16/UTF-32 in Cargo.toml
 - [x] T134 [P] [ENC] Implement BOM detection for UTF-16 LE/BE in src/scanner/encoding.rs
-- [ ] T135 [P] [ENC] Implement BOM detection for UTF-32 LE/BE in src/scanner/encoding.rs
-- [ ] T136 [ENC] Implement UTF-16 LE decoding with encoding_rs in src/scanner/encoding.rs
-- [ ] T137 [ENC] Implement UTF-16 BE decoding with encoding_rs in src/scanner/encoding.rs
-- [ ] T138 [ENC] Implement UTF-32 LE decoding with encoding_rs in src/scanner/encoding.rs
-- [ ] T139 [ENC] Implement UTF-32 BE decoding with encoding_rs in src/scanner/encoding.rs
-- [ ] T140 [ENC] Implement heuristic-based encoding detection for files without BOM in src/scanner/encoding.rs
-- [ ] T141 [ENC] Update detect_and_decode() to try UTF-16/UTF-32 after UTF-8 fails in src/scanner/encoding.rs
+- [x] T135 [P] [ENC] Implement BOM detection for UTF-32 LE/BE in src/scanner/encoding.rs
+- [x] T136 [ENC] Implement UTF-16 LE decoding with encoding_rs in src/scanner/encoding.rs
+- [x] T137 [ENC] Implement UTF-16 BE decoding with encoding_rs in src/scanner/encoding.rs
+- [x] T138 [ENC] Implement UTF-32 LE decoding with encoding_rs in src/scanner/encoding.rs
+- [x] T139 [ENC] Implement UTF-32 BE decoding with encoding_rs in src/scanner/encoding.rs
+- [x] T140 [ENC] Implement heuristic-based encoding detection for files without BOM in src/scanner/encoding.rs
+- [x] T141 [ENC] Update detect_and_decode() to try UTF-16/UTF-32 after UTF-8 fails in src/scanner/encoding.rs
 - [ ] T142 [ENC] Add encoding information to Violation struct in src/report/violation.rs
 - [ ] T143 [P] [ENC] Create test fixtures with UTF-16 LE encoded files in tests/integration/fixtures/encodings/utf16le/
 - [ ] T144 [P] [ENC] Create test fixtures with UTF-16 BE encoded files in tests/integration/fixtures/encodings/utf16be/

@@ -234,6 +234,50 @@ pub fn detect_and_decode(bytes: &[u8]) -> Result<String> {
     ))
 }
 
+/// Detect encoding and decode to UTF-8, returning both the string and detected encoding
+pub fn detect_decode_with_encoding(bytes: &[u8]) -> Result<(String, DetectedEncoding)> {
+    // Check for BOM first (highest priority)
+    if let Some(encoding) = detect_bom(bytes) {
+        let data = match encoding {
+            DetectedEncoding::Utf8 => &bytes[3..], // Skip UTF-8 BOM
+            DetectedEncoding::Utf16Le | DetectedEncoding::Utf16Be => &bytes[2..], // Skip UTF-16 BOM
+            DetectedEncoding::Utf32Le | DetectedEncoding::Utf32Be => &bytes[4..], // Skip UTF-32 BOM
+        };
+        let decoded = match encoding {
+            DetectedEncoding::Utf8 => std::str::from_utf8(data)
+                .map(|s| s.to_string())
+                .map_err(|e| crate::Error::Encoding(format!("Invalid UTF-8 after BOM: {}", e)))?,
+            DetectedEncoding::Utf16Le => decode_utf16_le(data)?,
+            DetectedEncoding::Utf16Be => decode_utf16_be(data)?,
+            DetectedEncoding::Utf32Le => decode_utf32_le(data)?,
+            DetectedEncoding::Utf32Be => decode_utf32_be(data)?,
+        };
+        return Ok((decoded, encoding));
+    }
+
+    // Try heuristic detection for UTF-16/32
+    if let Some(encoding) = detect_heuristic(bytes) {
+        let decoded = match encoding {
+            DetectedEncoding::Utf16Le => decode_utf16_le(bytes)?,
+            DetectedEncoding::Utf16Be => decode_utf16_be(bytes)?,
+            DetectedEncoding::Utf32Le => decode_utf32_le(bytes)?,
+            DetectedEncoding::Utf32Be => decode_utf32_be(bytes)?,
+            DetectedEncoding::Utf8 => unreachable!("UTF-8 not returned by heuristic"),
+        };
+        return Ok((decoded, encoding));
+    }
+
+    // Try UTF-8 (after checking for UTF-16/32 to avoid false positives with nulls)
+    if let Ok(s) = std::str::from_utf8(bytes) {
+        return Ok((s.to_string(), DetectedEncoding::Utf8));
+    }
+
+    // Fall back to error
+    Err(crate::Error::Encoding(
+        "Could not detect encoding (not UTF-8, UTF-16, or UTF-32)".to_string(),
+    ))
+}
+
 /// Check if file appears to be binary (null bytes in first 8KB)
 pub fn is_binary(bytes: &[u8]) -> bool {
     let check_len = bytes.len().min(8192);

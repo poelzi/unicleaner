@@ -39,6 +39,10 @@ pub struct Args {
     /// Maximum number of parallel threads (default: number of CPUs)
     #[arg(short = 'j', long)]
     pub jobs: Option<usize>,
+
+    /// Force a specific encoding (auto-detect if not specified)
+    #[arg(long, value_enum)]
+    pub encoding: Option<EncodingOption>,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -51,6 +55,34 @@ pub enum OutputFormat {
     Github,
     /// GitLab CI format
     Gitlab,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum EncodingOption {
+    /// UTF-8 encoding
+    Utf8,
+    /// UTF-16 Little Endian
+    Utf16Le,
+    /// UTF-16 Big Endian
+    Utf16Be,
+    /// UTF-32 Little Endian
+    Utf32Le,
+    /// UTF-32 Big Endian
+    Utf32Be,
+}
+
+impl EncodingOption {
+    /// Convert to DetectedEncoding for use in scanner
+    pub fn to_detected_encoding(self) -> crate::scanner::encoding::DetectedEncoding {
+        use crate::scanner::encoding::DetectedEncoding;
+        match self {
+            Self::Utf8 => DetectedEncoding::Utf8,
+            Self::Utf16Le => DetectedEncoding::Utf16Le,
+            Self::Utf16Be => DetectedEncoding::Utf16Be,
+            Self::Utf32Le => DetectedEncoding::Utf32Le,
+            Self::Utf32Be => DetectedEncoding::Utf32Be,
+        }
+    }
 }
 
 impl Args {
@@ -126,5 +158,30 @@ mod tests {
     fn test_args_validate_jobs_zero() {
         let args = Args::try_parse_from(vec!["unicleaner", "--jobs", "0"]).unwrap();
         assert!(args.validate().is_err());
+    }
+
+    #[test]
+    fn test_args_encoding_flag() {
+        let args = Args::try_parse_from(vec!["unicleaner", "--encoding", "utf16-le"]).unwrap();
+        assert!(args.encoding.is_some());
+        assert!(matches!(args.encoding.unwrap(), EncodingOption::Utf16Le));
+    }
+
+    #[test]
+    fn test_encoding_option_conversion() {
+        use crate::scanner::encoding::DetectedEncoding;
+
+        assert_eq!(
+            EncodingOption::Utf8.to_detected_encoding(),
+            DetectedEncoding::Utf8
+        );
+        assert_eq!(
+            EncodingOption::Utf16Le.to_detected_encoding(),
+            DetectedEncoding::Utf16Le
+        );
+        assert_eq!(
+            EncodingOption::Utf32Be.to_detected_encoding(),
+            DetectedEncoding::Utf32Be
+        );
     }
 }

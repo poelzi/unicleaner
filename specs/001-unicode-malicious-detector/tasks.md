@@ -401,15 +401,15 @@ Per Constitution Principle III:
 - [x] T139 [ENC] Implement UTF-32 BE decoding with encoding_rs in src/scanner/encoding.rs
 - [x] T140 [ENC] Implement heuristic-based encoding detection for files without BOM in src/scanner/encoding.rs
 - [x] T141 [ENC] Update detect_and_decode() to try UTF-16/UTF-32 after UTF-8 fails in src/scanner/encoding.rs
-- [ ] T142 [ENC] Add encoding information to Violation struct in src/report/violation.rs
-- [ ] T143 [P] [ENC] Create test fixtures with UTF-16 LE encoded files in tests/integration/fixtures/encodings/utf16le/
-- [ ] T144 [P] [ENC] Create test fixtures with UTF-16 BE encoded files in tests/integration/fixtures/encodings/utf16be/
-- [ ] T145 [P] [ENC] Create test fixtures with UTF-32 LE encoded files in tests/integration/fixtures/encodings/utf32le/
-- [ ] T146 [P] [ENC] Create test fixtures with UTF-32 BE encoded files in tests/integration/fixtures/encodings/utf32be/
-- [ ] T147 [ENC] Update file_scanner to report detected encoding in scan results in src/scanner/file_scanner.rs
-- [ ] T148 [ENC] Add --encoding flag to CLI for forcing specific encoding in src/cli/args.rs
-- [ ] T149 [ENC] Update error messages to include detected encoding information in src/lib.rs
-- [ ] T150 [ENC] Verify all encoding tests pass and malicious Unicode is detected in all encodings
+- [x] T142 [ENC] Add encoding information to Violation struct in src/report/violation.rs
+- [x] T143 [P] [ENC] Create test fixtures with UTF-16 LE encoded files in tests/integration/fixtures/encodings/utf16le/
+- [x] T144 [P] [ENC] Create test fixtures with UTF-16 BE encoded files in tests/integration/fixtures/encodings/utf16be/
+- [x] T145 [P] [ENC] Create test fixtures with UTF-32 LE encoded files in tests/integration/fixtures/encodings/utf32le/
+- [x] T146 [P] [ENC] Create test fixtures with UTF-32 BE encoded files in tests/integration/fixtures/encodings/utf32be/
+- [x] T147 [ENC] Update file_scanner to report detected encoding in scan results in src/scanner/file_scanner.rs
+- [x] T148 [ENC] Add --encoding flag to CLI for forcing specific encoding in src/cli/args.rs
+- [x] T149 [ENC] Update error messages to include detected encoding information in src/lib.rs
+- [x] T150 [ENC] Verify all encoding tests pass and malicious Unicode is detected in all encodings
 
 **Checkpoint**: UTF-8, UTF-16 (BE/LE), and UTF-32 (BE/LE) all supported with proper BOM and heuristic detection ✅
 

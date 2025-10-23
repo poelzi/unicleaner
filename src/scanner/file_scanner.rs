@@ -1,7 +1,7 @@
 //! Core file scanning logic
 
 use crate::report::Violation;
-use crate::scanner::encoding::{detect_and_decode, is_binary};
+use crate::scanner::encoding::{detect_decode_with_encoding, is_binary};
 use crate::scanner::unicode_detector::detect_in_string;
 use crate::Result;
 use std::fs;
@@ -17,11 +17,16 @@ pub fn scan_file(path: &Path) -> Result<Vec<Violation>> {
         return Ok(Vec::new());
     }
 
-    // Decode to UTF-8
-    let content = detect_and_decode(&bytes)?;
+    // Decode to UTF-8 and detect encoding
+    let (content, encoding) = detect_decode_with_encoding(&bytes)?;
 
     // Detect malicious Unicode
-    let violations = detect_in_string(&content, path);
+    let mut violations = detect_in_string(&content, path);
+
+    // Add encoding information to all violations
+    for violation in &mut violations {
+        *violation = violation.clone().with_encoding(encoding);
+    }
 
     Ok(violations)
 }

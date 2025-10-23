@@ -52,6 +52,7 @@ fn format_violations(violations: &[Violation], use_color: bool, verbose: bool) -
                 violation.pattern_name
             ));
             output.push_str(&format!("  Category: {:?}\n", violation.category));
+            output.push_str(&format!("  Encoding: {}\n", violation.encoding_name()));
             if !violation.context.is_empty() {
                 output.push_str(&format!("  Context: {}\n", violation.context.trim()));
             }

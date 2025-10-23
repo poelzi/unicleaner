@@ -1,0 +1,196 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unicleaner.io/schemas/v1/output.json",
+  "title": "Unicleaner Scan Output",
+  "description": "JSON output format for unicleaner malicious Unicode detection",
+  "type": "object",
+  "required": ["version", "timestamp", "config", "summary", "violations"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Unicleaner version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-z0-9]+)?$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of scan completion"
+    },
+    "config": {
+      "type": "object",
+      "description": "Configuration used for this scan",
+      "required": ["path", "severity_threshold"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to configuration file or '<default>'"
+        },
+        "severity_threshold": {
+          "type": "string",
+          "enum": ["error", "warning", "info"],
+          "description": "Minimum severity level reported"
+        },
+        "diff_mode": {
+          "type": "boolean",
+          "description": "Whether changeset mode was used"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "description": "Scan summary statistics",
+      "required": ["files_scanned", "files_clean", "files_with_violations", "total_violations", "duration_ms"],
+      "properties": {
+        "files_scanned": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of files processed"
+        },
+        "files_clean": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of files with no violations"
+        },
+        "files_with_violations": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of files containing violations"
+        },
+        "files_skipped": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of files skipped (binary, too large, etc.)"
+        },
+        "total_violations": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total count of all violations found"
+        },
+        "violations_by_severity": {
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "warning": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "info": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total scan duration in milliseconds"
+        }
+      }
+    },
+    "violations": {
+      "type": "array",
+      "description": "List of all violations found",
+      "items": {
+        "$ref": "#/definitions/Violation"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "description": "List of files that could not be scanned",
+      "items": {
+        "$ref": "#/definitions/ScanError"
+      }
+    }
+  },
+  "definitions": {
+    "Violation": {
+      "type": "object",
+      "required": ["file", "line", "column", "code_point", "character_name", "severity", "pattern", "message"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Path to file containing violation"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Line number (1-indexed)"
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Column number (1-indexed)"
+        },
+        "code_point": {
+          "type": "string",
+          "pattern": "^U\\+[0-9A-F]{4,6}$",
+          "description": "Unicode code point in U+XXXX format"
+        },
+        "character": {
+          "type": "string",
+          "description": "The actual character (may be invisible)"
+        },
+        "character_name": {
+          "type": "string",
+          "description": "Unicode character name",
+          "examples": ["ZERO WIDTH SPACE", "RIGHT-TO-LEFT OVERRIDE"]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["error", "warning", "info"],
+          "description": "Severity level of this violation"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Name of the malicious pattern detected",
+          "examples": ["zero-width-space", "bidi-override", "homoglyph"]
+        },
+        "category": {
+          "type": "string",
+          "enum": ["zero-width", "bidi-override", "homoglyph", "control-char", "non-standard"],
+          "description": "Category of malicious pattern"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable description of the issue"
+        },
+        "context": {
+          "type": "string",
+          "description": "Surrounding text for context (may contain the malicious character)"
+        },
+        "byte_offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Byte offset in file"
+        },
+        "suggestion": {
+          "type": "string",
+          "description": "Suggested remediation",
+          "examples": ["Remove zero-width character", "Replace with ASCII equivalent"]
+        }
+      }
+    },
+    "ScanError": {
+      "type": "object",
+      "required": ["file", "error_type", "message"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Path to file that failed to scan"
+        },
+        "error_type": {
+          "type": "string",
+          "enum": ["io_error", "encoding_error", "parse_error", "permission_denied"],
+          "description": "Type of error encountered"
+        },
+        "message": {
+          "type": "string",
+          "description": "Detailed error message"
+        }
+      }
+    }
+  }
+}

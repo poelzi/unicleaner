@@ -1,0 +1,44 @@
+# Rust
+target/
+debug/
+release/
+**/*.rs.bk
+*.rlib
+*.prof*
+
+# Cargo
+Cargo.lock
+.cargo/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Test artifacts
+coverage/
+*.profraw
+*.profdata
+
+# Nix
+result
+result-*
+.direnv/
+
+# Fuzzing
+fuzz/corpus/
+fuzz/artifacts/

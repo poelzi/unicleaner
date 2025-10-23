@@ -1,0 +1,231 @@
+# CLI Interface Contract
+# This defines the command-line interface for unicleaner
+
+name: unicleaner
+version: 1.0.0
+description: Detect malicious Unicode characters in source code
+
+commands:
+  scan:
+    description: Scan files or directories for malicious Unicode
+    default: true
+
+    arguments:
+      path:
+        description: Path to scan (file, directory, or Git repository)
+        required: true
+        type: string
+        examples:
+          - "."
+          - "src/"
+          - "/path/to/project"
+          - "main.rs"
+
+    options:
+      config:
+        short: c
+        long: config
+        description: Path to TOML configuration file
+        type: string
+        default: "unicleaner.toml"
+        examples:
+          - "--config=custom.toml"
+          - "-c /etc/unicleaner/config.toml"
+
+      color:
+        long: color
+        description: Control colored output
+        type: enum
+        values: [auto, always, never]
+        default: auto
+        examples:
+          - "--color=never"
+          - "--color=always"
+
+      json:
+        short: j
+        long: json
+        description: Output results as JSON instead of human-readable format
+        type: boolean
+        default: false
+        examples:
+          - "--json"
+          - "-j"
+
+      diff:
+        short: d
+        long: diff
+        description: Only scan changed files in Git repository
+        type: boolean
+        default: false
+        conflicts_with: [all]
+        examples:
+          - "--diff"
+          - "-d"
+
+      all:
+        short: a
+        long: all
+        description: Scan all files, ignoring .gitignore patterns
+        type: boolean
+        default: false
+        conflicts_with: [diff]
+        examples:
+          - "--all"
+          - "-a"
+
+      severity:
+        short: s
+        long: severity
+        description: Minimum severity level to report
+        type: enum
+        values: [error, warning, info]
+        default: warning
+        examples:
+          - "--severity=error"
+          - "-s info"
+
+      quiet:
+        short: q
+        long: quiet
+        description: Suppress non-essential output
+        type: boolean
+        default: false
+        examples:
+          - "--quiet"
+          - "-q"
+
+      verbose:
+        short: v
+        long: verbose
+        description: Show detailed scanning progress
+        type: boolean
+        default: false
+        conflicts_with: [quiet]
+        examples:
+          - "--verbose"
+          - "-v"
+
+      max-file-size:
+        long: max-file-size
+        description: Skip files larger than this size (in MB)
+        type: integer
+        default: 100
+        examples:
+          - "--max-file-size=50"
+
+      threads:
+        short: t
+        long: threads
+        description: Number of parallel threads for scanning
+        type: integer
+        default: 0  # 0 means auto-detect CPU count
+        examples:
+          - "--threads=4"
+          - "-t 8"
+
+  init:
+    description: Generate a default configuration file
+
+    options:
+      output:
+        short: o
+        long: output
+        description: Path for the generated config file
+        type: string
+        default: "unicleaner.toml"
+        examples:
+          - "--output=custom.toml"
+          - "-o .unicleaner.toml"
+
+      preset:
+        short: p
+        long: preset
+        description: Configuration preset to use
+        type: enum
+        values: [strict, standard, permissive, multilingual]
+        default: standard
+        examples:
+          - "--preset=strict"
+          - "-p multilingual"
+
+  list-presets:
+    description: List all available language presets
+
+    options:
+      format:
+        short: f
+        long: format
+        description: Output format
+        type: enum
+        values: [table, json, yaml]
+        default: table
+        examples:
+          - "--format=json"
+          - "-f yaml"
+
+global_options:
+  help:
+    short: h
+    long: help
+    description: Print help information
+    type: boolean
+
+  version:
+    short: V
+    long: version
+    description: Print version information
+    type: boolean
+
+environment_variables:
+  NO_COLOR:
+    description: Disable colored output when set to any value
+    type: boolean
+
+  CLICOLOR:
+    description: Control colored output (0=never, 1=auto)
+    type: integer
+
+  CLICOLOR_FORCE:
+    description: Force colored output even when not TTY
+    type: boolean
+
+  UNICLEANER_CONFIG:
+    description: Default path to configuration file
+    type: string
+
+  UNICLEANER_THREADS:
+    description: Default number of threads for parallel scanning
+    type: integer
+
+exit_codes:
+  0:
+    description: Success - no malicious Unicode found
+  1:
+    description: Violations found - malicious Unicode detected
+  2:
+    description: Error - configuration error, I/O error, or other runtime error
+  3:
+    description: Partial success - some files could not be scanned
+
+examples:
+  - description: "Scan current directory with default settings"
+    command: "unicleaner ."
+
+  - description: "Scan with custom config file"
+    command: "unicleaner src/ --config=myproject.toml"
+
+  - description: "Scan only changed files in Git repository"
+    command: "unicleaner . --diff"
+
+  - description: "Output JSON for CI pipeline"
+    command: "unicleaner . --json --no-color"
+
+  - description: "Generate default configuration"
+    command: "unicleaner init"
+
+  - description: "Scan with strict severity (errors only)"
+    command: "unicleaner . --severity=error"
+
+  - description: "List available language presets"
+    command: "unicleaner list-presets"

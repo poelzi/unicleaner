@@ -1,0 +1,76 @@
+[package]
+name = "unicleaner"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["Unicleaner Contributors"]
+description = "Detect malicious Unicode characters in source code"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/unicleaner"
+keywords = ["security", "unicode", "scanner", "cli", "malicious"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+# CLI parsing
+clap = { version = "4", features = ["derive", "cargo", "wrap_help"] }
+
+# Configuration
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Unicode handling
+unicode-segmentation = "1.10"
+unicode-normalization = "0.1"
+
+# Git integration
+git2 = "0.18"
+
+# Encoding detection
+chardetng = "0.1"
+encoding_rs = "0.8"
+
+# Color output
+owo-colors = { version = "4", features = ["supports-colors"] }
+
+# File operations
+ignore = "0.4"
+globset = "0.4"
+walkdir = "2"
+memmap2 = "0.9"
+
+# Parallel processing
+rayon = "1.8"
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+[dev-dependencies]
+# Integration testing
+assert_cmd = "2"
+predicates = "3"
+
+# Property-based testing
+proptest = "1"
+
+# Test utilities
+tempfile = "3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = 3
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[[bin]]
+name = "unicleaner"
+path = "src/main.rs"
+
+[lib]
+name = "unicleaner"
+path = "src/lib.rs"

@@ -363,3 +363,142 @@ Per Constitution Principle III:
 - Stop at any checkpoint to validate story independently
 - Use `cargo test` frequently during development
 - Run `cargo clippy` before committing
+---
+
+## Phase 8: Unicode Encoding Support (UTF-16, UTF-32)
+
+**Purpose**: Extend encoding detection to support UTF-16 (BE/LE) and UTF-32 (BE/LE) in addition to existing UTF-8 support
+
+**Why**: Many source files, especially from Windows environments or international projects, use UTF-16 or UTF-32 encodings. Without proper detection and conversion, malicious Unicode in these files would go undetected.
+
+**Current State**: Only UTF-8 with fast-path detection is implemented in src/scanner/encoding.rs. Non-UTF-8 files currently return an error.
+
+**Goal**: Detect and correctly process UTF-8, UTF-16 (BE/LE), and UTF-32 (BE/LE) encoded files, converting all to UTF-8 for Unicode malicious character scanning.
+
+### Tests for Encoding Support ⚠️ WRITE TESTS FIRST
+
+- [x] T121 [P] [ENC] Write unit test for UTF-16 LE BOM detection in src/scanner/encoding.rs
+- [x] T122 [P] [ENC] Write unit test for UTF-16 BE BOM detection in src/scanner/encoding.rs
+- [x] T123 [P] [ENC] Write unit test for UTF-32 LE BOM detection in src/scanner/encoding.rs
+- [x] T124 [P] [ENC] Write unit test for UTF-32 BE BOM detection in src/scanner/encoding.rs
+- [x] T125 [P] [ENC] Write unit test for UTF-16 LE decoding without BOM in src/scanner/encoding.rs
+- [x] T126 [P] [ENC] Write unit test for UTF-16 BE decoding without BOM in src/scanner/encoding.rs
+- [x] T127 [P] [ENC] Write unit test for UTF-32 LE decoding without BOM in src/scanner/encoding.rs
+- [x] T128 [P] [ENC] Write unit test for UTF-32 BE decoding without BOM in src/scanner/encoding.rs
+- [x] T129 [P] [ENC] Write unit test for mixed encoding files in tests/integration/encoding_tests.rs
+- [x] T130 [P] [ENC] Write integration test for UTF-16 file with malicious Unicode in tests/integration/encoding_tests.rs
+- [x] T131 [P] [ENC] Write integration test for UTF-32 file with malicious Unicode in tests/integration/encoding_tests.rs
+- [x] T132 [P] [ENC] Write integration test for encoding detection priority (BOM > heuristic) in tests/integration/encoding_tests.rs
+
+### Implementation for Encoding Support
+
+- [ ] T133 [ENC] Add encoding_rs crate integration for UTF-16/UTF-32 in Cargo.toml
+- [x] T134 [P] [ENC] Implement BOM detection for UTF-16 LE/BE in src/scanner/encoding.rs
+- [ ] T135 [P] [ENC] Implement BOM detection for UTF-32 LE/BE in src/scanner/encoding.rs
+- [ ] T136 [ENC] Implement UTF-16 LE decoding with encoding_rs in src/scanner/encoding.rs
+- [ ] T137 [ENC] Implement UTF-16 BE decoding with encoding_rs in src/scanner/encoding.rs
+- [ ] T138 [ENC] Implement UTF-32 LE decoding with encoding_rs in src/scanner/encoding.rs
+- [ ] T139 [ENC] Implement UTF-32 BE decoding with encoding_rs in src/scanner/encoding.rs
+- [ ] T140 [ENC] Implement heuristic-based encoding detection for files without BOM in src/scanner/encoding.rs
+- [ ] T141 [ENC] Update detect_and_decode() to try UTF-16/UTF-32 after UTF-8 fails in src/scanner/encoding.rs
+- [ ] T142 [ENC] Add encoding information to Violation struct in src/report/violation.rs
+- [ ] T143 [P] [ENC] Create test fixtures with UTF-16 LE encoded files in tests/integration/fixtures/encodings/utf16le/
+- [ ] T144 [P] [ENC] Create test fixtures with UTF-16 BE encoded files in tests/integration/fixtures/encodings/utf16be/
+- [ ] T145 [P] [ENC] Create test fixtures with UTF-32 LE encoded files in tests/integration/fixtures/encodings/utf32le/
+- [ ] T146 [P] [ENC] Create test fixtures with UTF-32 BE encoded files in tests/integration/fixtures/encodings/utf32be/
+- [ ] T147 [ENC] Update file_scanner to report detected encoding in scan results in src/scanner/file_scanner.rs
+- [ ] T148 [ENC] Add --encoding flag to CLI for forcing specific encoding in src/cli/args.rs
+- [ ] T149 [ENC] Update error messages to include detected encoding information in src/lib.rs
+- [ ] T150 [ENC] Verify all encoding tests pass and malicious Unicode is detected in all encodings
+
+**Checkpoint**: UTF-8, UTF-16 (BE/LE), and UTF-32 (BE/LE) all supported with proper BOM and heuristic detection ✅
+
+---
+
+## Updated Dependencies & Execution Order
+
+### Phase 8 Dependencies
+
+- **Encoding Support (Phase 8)**: Can start after Phase 2 (Foundational) is complete
+  - Enhances existing scanner functionality
+  - No dependencies on User Story 2, 3, or 4
+  - Can be done in parallel with other user stories or after US1 completion
+  - **Recommended**: Complete after US1 (MVP) but before production deployment
+
+### Parallel Opportunities in Phase 8
+
+- All test tasks (T121-T132) marked [P] can run in parallel
+- All BOM detection tasks (T134-T135) can run in parallel
+- All test fixture creation tasks (T143-T146) can run in parallel
+- Unit tests can be written and run independently
+
+### Integration Points
+
+- Must update `src/scanner/encoding.rs` with new detection logic
+- Must update `src/scanner/file_scanner.rs` to handle encoding info
+- Must update `src/report/violation.rs` to include encoding metadata
+- Must create new test fixtures for each encoding type
+
+---
+
+## Updated Task Summary
+
+- **Total Tasks**: 150 (was 120, +30 new encoding tasks)
+- **Setup Tasks**: 9 (T001-T009)
+- **Foundational Tasks**: 14 (T010-T023)
+- **User Story 1 Tasks**: 27 (T024-T050)
+- **User Story 2 Tasks**: 21 (T051-T071)
+- **User Story 3 Tasks**: 13 (T072-T084)
+- **User Story 4 Tasks**: 17 (T085-T101)
+- **Polish Tasks**: 19 (T102-T120)
+- **Encoding Support Tasks**: 30 (T121-T150) - 12 tests + 18 implementation
+- **Parallel Opportunities**: ~100 tasks marked with [P]
+
+### Updated MVP Scope
+
+**Option 1 - Basic MVP**: Phase 1 + Phase 2 + Phase 3 (US1) = 50 tasks
+- Delivers: Core malicious Unicode detection (UTF-8 only)
+
+**Option 2 - Production-Ready MVP**: Phase 1 + Phase 2 + Phase 3 + Phase 8 = 80 tasks
+- Delivers: Core detection with full encoding support (UTF-8, UTF-16, UTF-32)
+- **Recommended**: This is the minimum for real-world deployment
+
+---
+
+## Implementation Notes for Encoding Support
+
+### BOM (Byte Order Mark) Detection
+
+UTF-16/UTF-32 files often start with BOM to indicate encoding and byte order:
+- UTF-16 LE BOM: `FF FE`
+- UTF-16 BE BOM: `FE FF`
+- UTF-32 LE BOM: `FF FE 00 00`
+- UTF-32 BE BOM: `00 00 FE FF`
+- UTF-8 BOM: `EF BB BF` (optional, already handled)
+
+### Heuristic Detection (No BOM)
+
+When no BOM is present, use heuristics:
+1. Try UTF-8 (fast path, already implemented)
+2. Check for null byte patterns (UTF-16/32 have regular nulls)
+3. Use encoding_rs statistical detection
+4. Fall back to chardetng for ambiguous cases
+
+### Testing Strategy
+
+1. Create test files in each encoding containing:
+   - Clean ASCII text
+   - Legitimate Unicode (各国語テキスト)
+   - Malicious Unicode (zero-width, bidi, homoglyphs)
+2. Verify detection works in all encodings
+3. Verify conversion to UTF-8 preserves malicious patterns
+4. Test edge cases: files without BOM, mixed content, invalid sequences
+
+### Performance Considerations
+
+- UTF-8 fast-path already optimized (no change needed)
+- UTF-16/32 detection adds minimal overhead (~1-2% for UTF-8 files)
+- Only files failing UTF-8 check go through additional detection
+- Decoding performance: UTF-16 ≈ UTF-8, UTF-32 slightly slower
+- Memory overhead: Temporary buffer for decoding (acceptable)
+

@@ -134,12 +134,12 @@
 - [x] T063 [US2] Implement TOML parsing with serde in src/config/parser.rs
 - [x] T064 [US2] Implement config validation logic in src/config/validation.rs
 - [x] T065 [US2] Add --config flag to CLI arguments in src/cli/args.rs
-- [ ] T066 [US2] Integrate config loading into scanner in src/scanner/file_scanner.rs
-- [ ] T067 [US2] Implement rule application during scanning in src/scanner/unicode_detector.rs
+- [x] T066 [US2] Integrate config loading into scanner in src/scanner/file_scanner.rs
+- [x] T067 [US2] Implement rule application during scanning in src/scanner/unicode_detector.rs
 - [x] T068 [US2] Create example configuration file in examples/unicleaner.toml
-- [ ] T069 [US2] Implement 'init' command to generate default config in src/cli/mod.rs
-- [ ] T070 [US2] Implement 'list-presets' command in src/cli/mod.rs
-- [ ] T071 [US2] Verify all US2 tests pass
+- [x] T069 [US2] Implement 'init' command to generate default config in src/cli/mod.rs
+- [x] T070 [US2] Implement 'list-presets' command in src/cli/mod.rs
+- [x] T071 [US2] Verify all US2 tests pass
 
 **Checkpoint**: At this point, User Stories 1 AND 2 are functional - scanning with configuration support
 

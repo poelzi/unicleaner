@@ -1,6 +1,6 @@
 //! CLI argument parsing
 
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
@@ -8,41 +8,64 @@ use std::path::PathBuf;
 #[command(version, about, long_about = None)]
 #[command(author = "unicleaner contributors")]
 pub struct Args {
-    /// Paths to scan (files or directories)
-    #[arg(value_name = "PATH", default_value = ".")]
-    pub paths: Vec<PathBuf>,
+    #[command(subcommand)]
+    pub command: Option<Command>,
 
     /// Configuration file path
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(short, long, value_name = "FILE", global = true)]
     pub config: Option<PathBuf>,
 
     /// Output format
-    #[arg(short = 'f', long, value_enum, default_value = "human")]
+    #[arg(short = 'f', long, value_enum, default_value = "human", global = true)]
     pub format: OutputFormat,
 
     /// Disable color output
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub no_color: bool,
 
     /// Show only summary (suppress individual violations)
-    #[arg(short, long)]
+    #[arg(short, long, global = true)]
     pub quiet: bool,
 
     /// Show verbose output
-    #[arg(short, long)]
+    #[arg(short, long, global = true)]
     pub verbose: bool,
+}
 
-    /// Scan only files changed in git (diff mode)
-    #[arg(long)]
-    pub diff: bool,
+#[derive(Debug, Subcommand)]
+pub enum Command {
+    /// Scan files for malicious Unicode (default command)
+    Scan {
+        /// Paths to scan (files or directories)
+        #[arg(value_name = "PATH", default_value = ".")]
+        paths: Vec<PathBuf>,
 
-    /// Maximum number of parallel threads (default: number of CPUs)
-    #[arg(short = 'j', long)]
-    pub jobs: Option<usize>,
+        /// Scan only files changed in git (diff mode)
+        #[arg(long)]
+        diff: bool,
 
-    /// Force a specific encoding (auto-detect if not specified)
-    #[arg(long, value_enum)]
-    pub encoding: Option<EncodingOption>,
+        /// Maximum number of parallel threads (default: number of CPUs)
+        #[arg(short = 'j', long)]
+        jobs: Option<usize>,
+
+        /// Force a specific encoding (auto-detect if not specified)
+        #[arg(long, value_enum)]
+        encoding: Option<EncodingOption>,
+    },
+
+    /// Generate a default configuration file
+    Init {
+        /// Output path for configuration file
+        #[arg(value_name = "FILE", default_value = "unicleaner.toml")]
+        output: PathBuf,
+
+        /// Overwrite existing file
+        #[arg(long)]
+        force: bool,
+    },
+
+    /// List available language presets
+    ListPresets,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -91,19 +114,55 @@ impl Args {
     }
 
     pub fn validate(&self) -> Result<(), String> {
-        // Validate that at least one path is provided
-        if self.paths.is_empty() {
-            return Err("At least one path must be provided".to_string());
-        }
+        // Validate subcommand-specific arguments
+        if let Some(Command::Scan { paths, jobs, .. }) = &self.command {
+            // Validate that at least one path is provided
+            if paths.is_empty() {
+                return Err("At least one path must be provided".to_string());
+            }
 
-        // Validate jobs parameter
-        if let Some(jobs) = self.jobs {
-            if jobs == 0 {
-                return Err("Number of jobs must be at least 1".to_string());
+            // Validate jobs parameter
+            if let Some(jobs) = jobs {
+                if *jobs == 0 {
+                    return Err("Number of jobs must be at least 1".to_string());
+                }
             }
         }
 
         Ok(())
+    }
+
+    /// Get the command, defaulting to Scan if none specified
+    pub fn get_command(&self) -> Command {
+        self.command.clone().unwrap_or(Command::Scan {
+            paths: vec![PathBuf::from(".")],
+            diff: false,
+            jobs: None,
+            encoding: None,
+        })
+    }
+}
+
+impl Clone for Command {
+    fn clone(&self) -> Self {
+        match self {
+            Command::Scan {
+                paths,
+                diff,
+                jobs,
+                encoding,
+            } => Command::Scan {
+                paths: paths.clone(),
+                diff: *diff,
+                jobs: *jobs,
+                encoding: *encoding,
+            },
+            Command::Init { output, force } => Command::Init {
+                output: output.clone(),
+                force: *force,
+            },
+            Command::ListPresets => Command::ListPresets,
+        }
     }
 }
 
@@ -114,20 +173,21 @@ mod tests {
     #[test]
     fn test_args_default() {
         let args = Args::try_parse_from(vec!["unicleaner"]).unwrap();
-        assert_eq!(args.paths, vec![PathBuf::from(".")]);
         assert_eq!(args.config, None);
         assert!(!args.no_color);
         assert!(!args.quiet);
         assert!(!args.verbose);
+        assert!(args.command.is_none());
     }
 
     #[test]
-    fn test_args_with_paths() {
-        let args = Args::try_parse_from(vec!["unicleaner", "src", "tests"]).unwrap();
-        assert_eq!(
-            args.paths,
-            vec![PathBuf::from("src"), PathBuf::from("tests")]
-        );
+    fn test_args_scan_with_paths() {
+        let args = Args::try_parse_from(vec!["unicleaner", "scan", "src", "tests"]).unwrap();
+        if let Some(Command::Scan { paths, .. }) = args.command {
+            assert_eq!(paths, vec![PathBuf::from("src"), PathBuf::from("tests")]);
+        } else {
+            panic!("Expected Scan command");
+        }
     }
 
     #[test]
@@ -150,21 +210,53 @@ mod tests {
 
     #[test]
     fn test_args_validate_success() {
-        let args = Args::try_parse_from(vec!["unicleaner", "src"]).unwrap();
+        let args = Args::try_parse_from(vec!["unicleaner", "scan", "src"]).unwrap();
         assert!(args.validate().is_ok());
     }
 
     #[test]
     fn test_args_validate_jobs_zero() {
-        let args = Args::try_parse_from(vec!["unicleaner", "--jobs", "0"]).unwrap();
+        let args = Args::try_parse_from(vec!["unicleaner", "scan", "--jobs", "0"]).unwrap();
         assert!(args.validate().is_err());
     }
 
     #[test]
     fn test_args_encoding_flag() {
-        let args = Args::try_parse_from(vec!["unicleaner", "--encoding", "utf16-le"]).unwrap();
-        assert!(args.encoding.is_some());
-        assert!(matches!(args.encoding.unwrap(), EncodingOption::Utf16Le));
+        let args =
+            Args::try_parse_from(vec!["unicleaner", "scan", "--encoding", "utf16-le"]).unwrap();
+        if let Some(Command::Scan { encoding, .. }) = args.command {
+            assert!(encoding.is_some());
+            assert!(matches!(encoding.unwrap(), EncodingOption::Utf16Le));
+        } else {
+            panic!("Expected Scan command");
+        }
+    }
+
+    #[test]
+    fn test_init_command() {
+        let args = Args::try_parse_from(vec!["unicleaner", "init"]).unwrap();
+        if let Some(Command::Init { output, force }) = args.command {
+            assert_eq!(output, PathBuf::from("unicleaner.toml"));
+            assert!(!force);
+        } else {
+            panic!("Expected Init command");
+        }
+    }
+
+    #[test]
+    fn test_init_command_with_path() {
+        let args = Args::try_parse_from(vec!["unicleaner", "init", "custom.toml"]).unwrap();
+        if let Some(Command::Init { output, .. }) = args.command {
+            assert_eq!(output, PathBuf::from("custom.toml"));
+        } else {
+            panic!("Expected Init command");
+        }
+    }
+
+    #[test]
+    fn test_list_presets_command() {
+        let args = Args::try_parse_from(vec!["unicleaner", "list-presets"]).unwrap();
+        assert!(matches!(args.command, Some(Command::ListPresets)));
     }
 
     #[test]

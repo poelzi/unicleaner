@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 use std::process;
 use std::time::Instant;
-use unicleaner::cli::args::{Args, OutputFormat};
+use unicleaner::cli::args::{Args, Command, OutputFormat};
+use unicleaner::config::presets;
 use unicleaner::report::formatter::format_human;
 use unicleaner::report::ScanResult;
 use unicleaner::scanner::parallel::scan_files_parallel;
@@ -17,12 +18,25 @@ fn main() {
         process::exit(2);
     }
 
-    // Run the scan
-    let exit_code = match run_scan(&args) {
-        Ok(code) => code,
-        Err(e) => {
-            eprintln!("Fatal error: {}", e);
-            2
+    // Execute command
+    let exit_code = match args.get_command() {
+        Command::Scan { .. } => match run_scan(&args) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("Fatal error: {}", e);
+                2
+            }
+        },
+        Command::Init { output, force } => match run_init(&output, force) {
+            Ok(_) => 0,
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                1
+            }
+        },
+        Command::ListPresets => {
+            run_list_presets();
+            0
         }
     };
 
@@ -32,13 +46,19 @@ fn main() {
 fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
     let start_time = Instant::now();
 
+    // Extract scan parameters from command
+    let (paths, jobs) = match args.get_command() {
+        Command::Scan { paths, jobs, .. } => (paths, jobs),
+        _ => unreachable!(),
+    };
+
     // Configure directory walker
     let walk_config = WalkConfig {
         follow_links: false,
         respect_gitignore: true,
         respect_hidden: true,
         max_depth: None,
-        threads: args.jobs.unwrap_or_else(num_cpus::get),
+        threads: jobs.unwrap_or_else(num_cpus::get),
     };
 
     // Collect files to scan
@@ -46,7 +66,7 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
         eprintln!("Collecting files to scan...");
     }
 
-    let files = walk_paths(&args.paths, &walk_config)?;
+    let files = walk_paths(&paths, &walk_config)?;
 
     if args.verbose {
         eprintln!("Found {} files to scan", files.len());
@@ -62,7 +82,7 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
         eprintln!("Scanning files...");
     }
 
-    let (violations, errors) = scan_files_parallel(files.clone(), args.jobs);
+    let (violations, errors) = scan_files_parallel(files.clone(), jobs);
 
     // Calculate statistics
     let files_scanned = files.len();
@@ -127,4 +147,60 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
     }
 
     Ok(result.exit_code())
+}
+
+fn run_init(output: &PathBuf, force: bool) -> Result<(), Box<dyn std::error::Error>> {
+    // Check if file exists
+    if output.exists() && !force {
+        return Err(format!(
+            "Configuration file '{}' already exists. Use --force to overwrite.",
+            output.display()
+        )
+        .into());
+    }
+
+    // Generate default configuration
+    let config_content = r#"# Unicleaner Configuration File
+# Deny malicious Unicode by default
+
+deny_by_default = true
+
+# Language presets (uncomment to enable)
+# [language_presets]
+# rust = "rust-default"
+# python = "python-default"
+# javascript = "js-default"
+
+# File-specific rules
+# [[file_rules]]
+# pattern = "**/*.rs"
+# allowed_ranges = [
+#     { start = 0x0000, end = 0x007F, name = "Basic Latin" }
+# ]
+# denied_code_points = []
+# priority = 1
+"#;
+
+    // Write to file
+    std::fs::write(output, config_content)?;
+
+    println!("Created default configuration file: {}", output.display());
+    println!("Edit this file to customize Unicode detection rules.");
+
+    Ok(())
+}
+
+fn run_list_presets() {
+    println!("Available Language Presets:\n");
+
+    let all_presets = presets::get_all_presets();
+    for (name, preset) in all_presets.iter() {
+        println!("  {} - {}", name, preset.description);
+        println!("    Allowed ranges: {}", preset.allowed_ranges.len());
+        println!();
+    }
+
+    println!("Use these presets in your unicleaner.toml:");
+    println!("  [language_presets]");
+    println!("  rust = \"rust-default\"");
 }

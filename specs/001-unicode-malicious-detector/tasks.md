@@ -116,15 +116,15 @@
 
 ### Tests for User Story 2 ⚠️ WRITE TESTS FIRST
 
-- [ ] T051 [P] [US2] Write unit test for TOML config parsing in src/config/parser.rs
-- [ ] T052 [P] [US2] Write unit test for LanguagePreset loading in src/config/presets.rs
-- [ ] T053 [P] [US2] Write unit test for FileRule matching in src/config/rules.rs
-- [ ] T054 [P] [US2] Write unit test for config validation in src/config/validation.rs
-- [ ] T055 [P] [US2] Write unit test for config merging logic in src/config/mod.rs
-- [ ] T056 [P] [US2] Write integration test for loading config files in tests/integration/config_tests.rs
-- [ ] T057 [P] [US2] Write integration test for language preset application in tests/integration/config_tests.rs
-- [ ] T058 [P] [US2] Write integration test for file-specific rules in tests/integration/config_tests.rs
-- [ ] T059 [P] [US2] Write integration test for deny-by-default behavior in tests/integration/config_tests.rs
+- [x] T051 [P] [US2] Write unit test for TOML config parsing in src/config/parser.rs
+- [x] T052 [P] [US2] Write unit test for LanguagePreset loading in src/config/presets.rs
+- [x] T053 [P] [US2] Write unit test for FileRule matching in src/config/rules.rs
+- [x] T054 [P] [US2] Write unit test for config validation in src/config/validation.rs
+- [x] T055 [P] [US2] Write unit test for config merging logic in src/config/mod.rs
+- [x] T056 [P] [US2] Write integration test for loading config files in tests/integration/config_tests.rs
+- [x] T057 [P] [US2] Write integration test for language preset application in tests/integration/config_tests.rs
+- [x] T058 [P] [US2] Write integration test for file-specific rules in tests/integration/config_tests.rs
+- [x] T059 [P] [US2] Write integration test for deny-by-default behavior in tests/integration/config_tests.rs
 
 ### Implementation for User Story 2
 

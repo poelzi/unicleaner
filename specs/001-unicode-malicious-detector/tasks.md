@@ -97,11 +97,11 @@
 - [x] T042 [US1] Implement Unicode detection logic in src/scanner/unicode_detector.rs
 - [x] T043 [US1] Implement Violation struct in src/report/violation.rs
 - [x] T044 [US1] Implement ScanResult struct in src/report/mod.rs
-- [ ] T045 [US1] Implement basic CLI argument parsing with clap in src/cli/args.rs
-- [ ] T046 [US1] Implement directory walking with ignore crate in src/scanner/mod.rs
-- [ ] T047 [US1] Integrate scanner with CLI in src/main.rs
-- [ ] T048 [US1] Implement basic human-readable output in src/cli/output.rs
-- [ ] T049 [US1] Add parallel file scanning with rayon in src/scanner/mod.rs
+- [x] T045 [US1] Implement basic CLI argument parsing with clap in src/cli/args.rs
+- [x] T046 [US1] Implement directory walking with ignore crate in src/scanner/mod.rs
+- [x] T047 [US1] Integrate scanner with CLI in src/main.rs
+- [x] T048 [US1] Implement basic human-readable output in src/cli/output.rs
+- [x] T049 [US1] Add parallel file scanning with rayon in src/scanner/mod.rs
 - [x] T050 [US1] Verify all US1 tests pass
 
 **Checkpoint**: At this point, User Story 1 (core scanning) is fully functional and independently testable ✅

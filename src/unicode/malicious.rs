@@ -1,7 +1,5 @@
 //! Malicious Unicode pattern definitions
 
-use super::ranges::UnicodeRange;
-
 /// Category of malicious Unicode pattern
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MaliciousCategory {

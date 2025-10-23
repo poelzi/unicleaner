@@ -1,9 +1,7 @@
 //! Unicode detection logic
 
 use crate::report::Violation;
-use crate::unicode::malicious::{
-    get_malicious_patterns, is_malicious, MaliciousCategory, Severity,
-};
+use crate::unicode::malicious::{get_malicious_patterns, is_malicious};
 use std::path::Path;
 use unicode_segmentation::UnicodeSegmentation;
 

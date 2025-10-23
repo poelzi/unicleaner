@@ -1,6 +1,6 @@
 //! Violation and error reporting structures
 
-use crate::unicode::malicious::{MaliciousCategory, MaliciousPattern, Severity};
+use crate::unicode::malicious::{MaliciousCategory, Severity};
 use std::path::PathBuf;
 
 /// Represents a detected malicious Unicode character

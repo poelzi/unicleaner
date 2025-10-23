@@ -33,6 +33,7 @@ encoding_rs = "0.8"
 
 # Color output
 owo-colors = { version = "4", features = ["supports-colors"] }
+supports-color = "3"
 
 # File operations
 ignore = "0.4"
@@ -42,6 +43,7 @@ memmap2 = "0.9"
 
 # Parallel processing
 rayon = "1.8"
+num_cpus = "1.16"
 
 # Error handling
 thiserror = "1"

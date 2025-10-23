@@ -39,7 +39,7 @@ pub enum Error {
     Parse(String),
 
     #[error("Git error: {0}")]
-    Git(#[from] git2::Error),
+    Git(String),
 
     #[error("Encoding error: {0}")]
     Encoding(String),

@@ -73,18 +73,18 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T024 [P] [US1] Write unit test for UnicodeRange contains() method in src/unicode/ranges.rs
-- [ ] T025 [P] [US1] Write unit test for detecting zero-width characters in src/unicode/malicious.rs
-- [ ] T026 [P] [US1] Write unit test for detecting bidi override characters in src/unicode/malicious.rs
-- [ ] T027 [P] [US1] Write unit test for detecting homoglyphs in src/unicode/malicious.rs
-- [ ] T028 [P] [US1] Write unit test for file scanning logic in src/scanner/file_scanner.rs
-- [ ] T029 [P] [US1] Write unit test for encoding detection in src/scanner/encoding.rs
-- [ ] T030 [P] [US1] Write integration test for CLI scanning command in tests/integration/cli_tests.rs
-- [ ] T031 [P] [US1] Write integration test for scanning zero-width fixtures in tests/integration/scan_tests.rs
-- [ ] T032 [P] [US1] Write integration test for scanning bidi fixtures in tests/integration/scan_tests.rs
-- [ ] T033 [P] [US1] Write integration test for scanning homoglyph fixtures in tests/integration/scan_tests.rs
-- [ ] T034 [P] [US1] Write integration test for clean file scanning in tests/integration/scan_tests.rs
-- [ ] T035 [P] [US1] Write contract test for exit codes in tests/contract/exit_codes.rs
+- [x] T024 [P] [US1] Write unit test for UnicodeRange contains() method in src/unicode/ranges.rs
+- [x] T025 [P] [US1] Write unit test for detecting zero-width characters in src/unicode/malicious.rs
+- [x] T026 [P] [US1] Write unit test for detecting bidi override characters in src/unicode/malicious.rs
+- [x] T027 [P] [US1] Write unit test for detecting homoglyphs in src/unicode/malicious.rs
+- [x] T028 [P] [US1] Write unit test for file scanning logic in src/scanner/file_scanner.rs
+- [x] T029 [P] [US1] Write unit test for encoding detection in src/scanner/encoding.rs
+- [x] T030 [P] [US1] Write integration test for CLI scanning command in tests/integration/cli_tests.rs
+- [x] T031 [P] [US1] Write integration test for scanning zero-width fixtures in tests/integration/scan_tests.rs
+- [x] T032 [P] [US1] Write integration test for scanning bidi fixtures in tests/integration/scan_tests.rs
+- [x] T033 [P] [US1] Write integration test for scanning homoglyph fixtures in tests/integration/scan_tests.rs
+- [x] T034 [P] [US1] Write integration test for clean file scanning in tests/integration/scan_tests.rs
+- [x] T035 [P] [US1] Write contract test for exit codes in tests/contract/exit_codes.rs
 
 ### Implementation for User Story 1
 

@@ -20,6 +20,8 @@ cargo test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECH
 ## Code Style
 
 Rust (stable channel, currently 1.75+): Follow standard conventions
+AVOID openssl
+use rust only libraries everywhere
 
 ## Recent Changes
 

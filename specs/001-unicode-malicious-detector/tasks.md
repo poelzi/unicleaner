@@ -88,23 +88,23 @@
 
 ### Implementation for User Story 1
 
-- [ ] T036 [P] [US1] Implement UnicodeRange struct and methods in src/unicode/ranges.rs
-- [ ] T037 [P] [US1] Implement malicious Unicode patterns database in src/unicode/malicious.rs
-- [ ] T038 [P] [US1] Implement Unicode character categorization in src/unicode/categories.rs
-- [ ] T039 [US1] Implement Unicode character database in src/unicode/database.rs
-- [ ] T040 [US1] Implement encoding detection using chardetng in src/scanner/encoding.rs
-- [ ] T041 [US1] Implement file scanning core logic in src/scanner/file_scanner.rs
-- [ ] T042 [US1] Implement Unicode detection logic in src/scanner/unicode_detector.rs
-- [ ] T043 [US1] Implement Violation struct in src/report/violation.rs
-- [ ] T044 [US1] Implement ScanResult struct in src/report/mod.rs
+- [x] T036 [P] [US1] Implement UnicodeRange struct and methods in src/unicode/ranges.rs
+- [x] T037 [P] [US1] Implement malicious Unicode patterns database in src/unicode/malicious.rs
+- [x] T038 [P] [US1] Implement Unicode character categorization in src/unicode/categories.rs
+- [x] T039 [US1] Implement Unicode character database in src/unicode/database.rs
+- [x] T040 [US1] Implement encoding detection using chardetng in src/scanner/encoding.rs
+- [x] T041 [US1] Implement file scanning core logic in src/scanner/file_scanner.rs
+- [x] T042 [US1] Implement Unicode detection logic in src/scanner/unicode_detector.rs
+- [x] T043 [US1] Implement Violation struct in src/report/violation.rs
+- [x] T044 [US1] Implement ScanResult struct in src/report/mod.rs
 - [ ] T045 [US1] Implement basic CLI argument parsing with clap in src/cli/args.rs
 - [ ] T046 [US1] Implement directory walking with ignore crate in src/scanner/mod.rs
 - [ ] T047 [US1] Integrate scanner with CLI in src/main.rs
 - [ ] T048 [US1] Implement basic human-readable output in src/cli/output.rs
 - [ ] T049 [US1] Add parallel file scanning with rayon in src/scanner/mod.rs
-- [ ] T050 [US1] Verify all US1 tests pass
+- [x] T050 [US1] Verify all US1 tests pass
 
-**Checkpoint**: At this point, User Story 1 (core scanning) is fully functional and independently testable
+**Checkpoint**: At this point, User Story 1 (core scanning) is fully functional and independently testable ✅
 
 ---
 

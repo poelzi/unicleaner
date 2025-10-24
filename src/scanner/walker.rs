@@ -97,7 +97,7 @@ mod tests {
         fs::write(&file, "test").unwrap();
 
         let config = WalkConfig::default();
-        let files = walk_paths(&[file.clone()], &config).unwrap();
+        let files = walk_paths(std::slice::from_ref(&file), &config).unwrap();
 
         assert_eq!(files.len(), 1);
         assert_eq!(files[0], file);
@@ -136,8 +136,10 @@ mod tests {
         fs::create_dir(&subdir).unwrap();
         fs::write(subdir.join("sub.txt"), "sub").unwrap();
 
-        let mut config = WalkConfig::default();
-        config.max_depth = Some(1);
+        let config = WalkConfig {
+            max_depth: Some(1),
+            ..Default::default()
+        };
 
         let files = walk_paths(&[temp.path().to_path_buf()], &config).unwrap();
 

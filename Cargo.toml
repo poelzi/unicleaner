@@ -34,11 +34,8 @@ encoding_rs = "0.8"
 owo-colors = { version = "4", features = ["supports-colors"] }
 supports-color = "3"
 
-# File operations
-ignore = "0.4"
-globset = "0.4"
-walkdir = "2"
-memmap2 = "0.9"
+ignore = "=0.4.20"
+globset = "=0.4.10"
 
 # Parallel processing
 rayon = "1.8"
@@ -52,15 +49,17 @@ anyhow = "1"
 # Integration testing
 assert_cmd = "2"
 predicates = "3"
+test-case = "3.3.1"
 
 # Property-based testing
-proptest = "1"
+proptest = "1.4.0"
 
 # Benchmarking
 criterion = "0.5"
 
 # Test utilities
 tempfile = "3"
+walkdir = "2"
 
 [profile.release]
 lto = true

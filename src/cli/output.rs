@@ -148,12 +148,10 @@ mod tests {
     fn test_is_tty() {
         // We can't reliably test actual TTY detection in unit tests
         // since it depends on how the tests are run (terminal vs CI/CD)
-        // But we can verify the function doesn't panic and returns a boolean
-        let stdout_is_tty = is_tty(ColorStream::Stdout);
-        let stderr_is_tty = is_tty(ColorStream::Stderr);
-
-        assert!(stdout_is_tty == true || stdout_is_tty == false);
-        assert!(stderr_is_tty == true || stderr_is_tty == false);
+        // But we can verify the function doesn't panic
+        let _stdout_is_tty = is_tty(ColorStream::Stdout);
+        let _stderr_is_tty = is_tty(ColorStream::Stderr);
+        // Function executed successfully without panicking
     }
 
     #[test]

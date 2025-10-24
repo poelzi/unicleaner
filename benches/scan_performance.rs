@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use tempfile::TempDir;
 use unicleaner::scanner::encoding::detect_and_decode;
 use unicleaner::scanner::file_scanner::scan_file;
-use unicleaner::unicode::malicious::detect_malicious_unicode;
+use unicleaner::scanner::unicode_detector::detect_in_string;
 
 /// Create a test file with the given content
 fn create_test_file(dir: &TempDir, name: &str, content: &str) -> PathBuf {
@@ -17,30 +17,31 @@ fn create_test_file(dir: &TempDir, name: &str, content: &str) -> PathBuf {
 
 fn benchmark_unicode_detection(c: &mut Criterion) {
     let mut group = c.benchmark_group("unicode_detection");
+    let test_path = PathBuf::from("test.rs");
 
     // Benchmark clean ASCII text
     let clean_ascii = "fn main() {\n    println!(\"Hello, world!\");\n}\n".repeat(100);
     group.bench_function("clean_ascii_1KB", |b| {
-        b.iter(|| detect_malicious_unicode(black_box(&clean_ascii)))
+        b.iter(|| detect_in_string(black_box(&clean_ascii), &test_path))
     });
 
     // Benchmark text with malicious Unicode
     let malicious =
-        format!("fn main() {{\u{200B}\n    println!(\"Hello\u{202E}, world!\");\n}}\n").repeat(100);
+        "fn main() {\u{200B}\n    println!(\"Hello\u{202E}, world!\");\n}\n".repeat(100);
     group.bench_function("malicious_1KB", |b| {
-        b.iter(|| detect_malicious_unicode(black_box(&malicious)))
+        b.iter(|| detect_in_string(black_box(&malicious), &test_path))
     });
 
     // Benchmark larger files
     let large_clean = "// This is a comment\nfn test() { let x = 42; }\n".repeat(1000);
     group.bench_function("clean_ascii_20KB", |b| {
-        b.iter(|| detect_malicious_unicode(black_box(&large_clean)))
+        b.iter(|| detect_in_string(black_box(&large_clean), &test_path))
     });
 
     // Benchmark with legitimate Unicode
     let unicode_text = "各国語のテキスト\nΕλληνικά κείμενο\nРусский текст\n".repeat(100);
     group.bench_function("legitimate_unicode_5KB", |b| {
-        b.iter(|| detect_malicious_unicode(black_box(&unicode_text)))
+        b.iter(|| detect_in_string(black_box(&unicode_text), &test_path))
     });
 
     group.finish();
@@ -108,12 +109,13 @@ fn benchmark_file_scanning(c: &mut Criterion) {
 
 fn benchmark_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("scaling");
+    let test_path = PathBuf::from("test.rs");
 
     // Test how detection scales with file size
     for size in [100, 500, 1000, 5000, 10000].iter() {
         let content = "fn test() { let x = 42; }\n".repeat(*size);
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
-            b.iter(|| detect_malicious_unicode(black_box(&content)))
+            b.iter(|| detect_in_string(black_box(&content), &test_path))
         });
     }
 
@@ -122,11 +124,12 @@ fn benchmark_scaling(c: &mut Criterion) {
 
 fn benchmark_worst_case(c: &mut Criterion) {
     let mut group = c.benchmark_group("worst_case");
+    let test_path = PathBuf::from("test.rs");
 
     // File with many malicious characters (worst case for detection)
     let worst_case = "\u{200B}".repeat(1000);
     group.bench_function("1000_zero_width_chars", |b| {
-        b.iter(|| detect_malicious_unicode(black_box(&worst_case)))
+        b.iter(|| detect_in_string(black_box(&worst_case), &test_path))
     });
 
     // Mixed malicious patterns
@@ -136,7 +139,7 @@ fn benchmark_worst_case(c: &mut Criterion) {
     )
     .repeat(100);
     group.bench_function("mixed_malicious_patterns", |b| {
-        b.iter(|| detect_malicious_unicode(black_box(&mixed)))
+        b.iter(|| detect_in_string(black_box(&mixed), &test_path))
     });
 
     group.finish();

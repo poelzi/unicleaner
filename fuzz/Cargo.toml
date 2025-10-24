@@ -34,3 +34,15 @@ name = "fuzz_file_scan"
 path = "fuzz_targets/fuzz_file_scan.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "encoding_detection"
+path = "fuzz_targets/encoding_detection.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "homoglyph_detector"
+path = "fuzz_targets/homoglyph_detector.rs"
+test = false
+doc = false

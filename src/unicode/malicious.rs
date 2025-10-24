@@ -89,14 +89,16 @@ pub fn get_malicious_patterns() -> Vec<MaliciousPattern> {
             category: MaliciousCategory::BidiOverride,
             code_points: vec![0x202C],
             severity: Severity::Error,
-            description: "Bidirectional text control can alter code meaning".to_string(),
+            description:
+                "PDF character detected - bidirectional text control can alter code meaning"
+                    .to_string(),
         },
         MaliciousPattern {
             name: "left-to-right-override".to_string(),
             category: MaliciousCategory::BidiOverride,
             code_points: vec![0x202D],
             severity: Severity::Error,
-            description: "Bidirectional override can reverse code visually (Trojan Source)"
+            description: "LRO character detected - can reverse code visually (Trojan Source)"
                 .to_string(),
         },
         MaliciousPattern {
@@ -104,8 +106,36 @@ pub fn get_malicious_patterns() -> Vec<MaliciousPattern> {
             category: MaliciousCategory::BidiOverride,
             code_points: vec![0x202E],
             severity: Severity::Error,
-            description: "Bidirectional override can reverse code visually (Trojan Source)"
-                .to_string(),
+            description: "RLO character detected".to_string(),
+        },
+        // Unicode isolate characters (Trojan Source CVE-2021-42574)
+        MaliciousPattern {
+            name: "left-to-right-isolate".to_string(),
+            category: MaliciousCategory::BidiOverride,
+            code_points: vec![0x2066],
+            severity: Severity::Error,
+            description: "LRI character detected".to_string(),
+        },
+        MaliciousPattern {
+            name: "right-to-left-isolate".to_string(),
+            category: MaliciousCategory::BidiOverride,
+            code_points: vec![0x2067],
+            severity: Severity::Error,
+            description: "RLI character detected".to_string(),
+        },
+        MaliciousPattern {
+            name: "first-strong-isolate".to_string(),
+            category: MaliciousCategory::BidiOverride,
+            code_points: vec![0x2068],
+            severity: Severity::Error,
+            description: "FSI character detected".to_string(),
+        },
+        MaliciousPattern {
+            name: "pop-directional-isolate".to_string(),
+            category: MaliciousCategory::BidiOverride,
+            code_points: vec![0x2069],
+            severity: Severity::Error,
+            description: "PDI character detected".to_string(),
         },
     ]
 }
@@ -122,6 +152,10 @@ pub fn is_malicious(code_point: u32) -> Option<&'static str> {
         0x202C => Some("pop-directional-formatting"),
         0x202D => Some("left-to-right-override"),
         0x202E => Some("right-to-left-override"),
+        0x2066 => Some("left-to-right-isolate"),
+        0x2067 => Some("right-to-left-isolate"),
+        0x2068 => Some("first-strong-isolate"),
+        0x2069 => Some("pop-directional-isolate"),
         _ => None,
     }
 }

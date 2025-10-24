@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn test_detect_zero_width_space() {
-        let content = "let user​name = \"admin\";"; // Contains U+200B
+        let content = "let user\u{200B}name = \"admin\";"; // Contains U+200B
         let violations = detect_in_string(content, &PathBuf::from("test.rs"));
 
         assert_eq!(violations.len(), 1);

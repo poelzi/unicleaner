@@ -105,6 +105,5 @@ mod tests {
         // Not applicable since we use built-in presets only
         // If we later support custom presets that reference each other,
         // this test would check for circular references
-        assert!(true);
     }
 }

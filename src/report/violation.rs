@@ -137,7 +137,7 @@ mod tests {
             Severity::Error,
             "test".to_string(),
         )
-        .with_context("let user​name".to_string());
+        .with_context("let user\u{200B}name".to_string());
 
         assert!(!violation.context.is_empty());
         assert!(violation.context.contains("user"));

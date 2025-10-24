@@ -141,6 +141,46 @@ cargo fmt
 cargo run -- .
 ```
 
+### Testing
+
+Unicleaner has comprehensive test coverage including:
+
+**Unit tests**:
+```bash
+cargo test --lib
+```
+
+**Integration tests**:
+```bash
+cargo test --test integration
+```
+
+**Property-based tests** (with proptest):
+```bash
+cargo test --test proptest
+# Run with more cases
+PROPTEST_CASES=10000 cargo test --test proptest
+```
+
+**Fuzz testing** (requires nightly Rust):
+```bash
+cargo +nightly fuzz run fuzz_unicode -- -max_total_time=60
+cargo +nightly fuzz run fuzz_config -- -max_total_time=60
+cargo +nightly fuzz run encoding_detection -- -max_total_time=60
+```
+
+**Performance benchmarks**:
+```bash
+cargo bench
+```
+
+**Code coverage**:
+```bash
+cargo tarpaulin --out Html
+```
+
+See [Testing Documentation](tests/proptest/README.md) for more details.
+
 ## License
 
 Dual-licensed under MIT OR Apache-2.0

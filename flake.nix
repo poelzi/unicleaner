@@ -8,6 +8,33 @@
   };
 
   outputs = { self, nixpkgs, rust-overlay, flake-utils }:
+    let
+      # Define overlay at top level
+      overlay = final: prev: {
+        unicleaner = prev.callPackage ({ rustPlatform, pkg-config, openssl, lib, darwin }:
+          rustPlatform.buildRustPackage {
+            pname = "unicleaner";
+            version = "1.0.0";
+            src = ./.;
+            cargoLock.lockFile = ./Cargo.lock;
+
+            nativeBuildInputs = [ pkg-config ];
+
+            buildInputs = [ openssl ] ++ lib.optionals prev.stdenv.isDarwin [
+              darwin.apple_sdk.frameworks.Security
+              darwin.apple_sdk.frameworks.SystemConfiguration
+            ];
+
+            meta = with lib; {
+              description = "Detect malicious Unicode characters in source code";
+              homepage = "https://github.com/yourusername/unicleaner";
+              license = with licenses; [ mit asl20 ];
+              maintainers = [ ];
+            };
+          }
+        ) {};
+      };
+    in
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -53,10 +80,6 @@
       {
         packages = {
           default = unicleaner;
-          unicleaner = unicleaner;
-        };
-
-        overlays.default = final: prev: {
           unicleaner = unicleaner;
         };
 
@@ -124,5 +147,8 @@
           '';
         };
       }
-    );
+    ) // {
+      # Top-level outputs (not per-system)
+      overlays.default = overlay;
+    };
 }

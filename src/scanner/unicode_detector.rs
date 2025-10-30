@@ -57,7 +57,8 @@ mod tests {
 
     #[test]
     fn test_detect_bidi_override() {
-        // Construct string with U+202E (right-to-left override) to avoid compiler warning
+        // Construct string with U+202E (right-to-left override) to avoid compiler
+        // warning
         let bidi_char = char::from_u32(0x202E).unwrap();
         let content = format!("/* {} }}", bidi_char);
         let violations = detect_in_string(&content, &PathBuf::from("test.rs"));

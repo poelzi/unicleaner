@@ -1,7 +1,7 @@
 //! Git integration for scanning only changed files
 //!
-//! This module provides simplified Git integration using the git command-line tool
-//! instead of libgit2, avoiding complex system dependencies.
+//! This module provides simplified Git integration using the git command-line
+//! tool instead of libgit2, avoiding complex system dependencies.
 
 use crate::Result;
 use std::path::{Path, PathBuf};

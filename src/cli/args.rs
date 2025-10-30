@@ -9,12 +9,12 @@ use std::path::PathBuf;
 #[command(version)]
 #[command(about = "Detect malicious Unicode characters in source code")]
 #[command(
-    long_about = "Unicleaner scans source code for potentially malicious Unicode characters including:\n\
-    - Zero-width characters (U+200B, U+200C, U+200D, U+FEFF)\n\
-    - Bidirectional override characters (U+202A-U+202E) - Trojan Source attacks\n\
-    - Homoglyphs - visually similar characters from different scripts\n\
-    - Non-printable control characters outside standard ASCII range\n\n\
-    Use 'unicleaner <COMMAND> --help' for command-specific help."
+    long_about = "Unicleaner scans source code for potentially malicious Unicode characters \
+                  including:\n- Zero-width characters (U+200B, U+200C, U+200D, U+FEFF)\n- \
+                  Bidirectional override characters (U+202A-U+202E) - Trojan Source attacks\n- \
+                  Homoglyphs - visually similar characters from different scripts\n- \
+                  Non-printable control characters outside standard ASCII range\n\nUse \
+                  'unicleaner <COMMAND> --help' for command-specific help."
 )]
 #[command(author = "unicleaner contributors")]
 pub struct Args {

@@ -15,8 +15,8 @@ pub fn validate_config(config: &Configuration) -> Result<(), Error> {
         }
     }
 
-    // Validate all file rules have valid glob patterns (already validated during creation)
-    // Validate Unicode ranges
+    // Validate all file rules have valid glob patterns (already validated during
+    // creation) Validate Unicode ranges
     for rule in &config.file_rules {
         for range in &rule.allowed_ranges {
             if range.start > range.end {
@@ -28,7 +28,8 @@ pub fn validate_config(config: &Configuration) -> Result<(), Error> {
 
             if range.end > 0x10FFFF {
                 return Err(Error::Config(format!(
-                    "Invalid Unicode range: end ({:#X}) exceeds maximum Unicode code point (U+10FFFF)",
+                    "Invalid Unicode range: end ({:#X}) exceeds maximum Unicode code point \
+                     (U+10FFFF)",
                     range.end
                 )));
             }

@@ -235,7 +235,8 @@ pub fn detect_and_decode(bytes: &[u8]) -> Result<String> {
     ))
 }
 
-/// Detect encoding and decode to UTF-8, returning both the string and detected encoding
+/// Detect encoding and decode to UTF-8, returning both the string and detected
+/// encoding
 pub fn detect_decode_with_encoding(bytes: &[u8]) -> Result<(String, DetectedEncoding)> {
     // Check for BOM first (highest priority)
     if let Some(encoding) = detect_bom(bytes) {

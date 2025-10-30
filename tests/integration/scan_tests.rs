@@ -10,7 +10,8 @@ fn test_scan_zero_width_fixtures() {
     }
 
     // TODO: This will fail until scanning is implemented
-    // let violations = unicleaner::scanner::file_scanner::scan_file(&fixture_path).unwrap();
+    // let violations =
+    // unicleaner::scanner::file_scanner::scan_file(&fixture_path).unwrap();
     // assert!(!violations.is_empty(), "Should detect zero-width space");
 
     // For now, just verify fixture exists
@@ -35,6 +36,7 @@ fn test_scan_clean_files() {
     assert!(fixture_path.exists(), "Clean test fixture should exist");
 
     // TODO: When implemented, should return zero violations
-    // let violations = unicleaner::scanner::file_scanner::scan_file(&fixture_path).unwrap();
+    // let violations =
+    // unicleaner::scanner::file_scanner::scan_file(&fixture_path).unwrap();
     // assert!(violations.is_empty(), "Clean file should have no violations");
 }

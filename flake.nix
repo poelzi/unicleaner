@@ -5,9 +5,13 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
+    pre-commit-hooks = {
+      url = "github:cachix/pre-commit-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils }:
+  outputs = { self, nixpkgs, rust-overlay, flake-utils, pre-commit-hooks }:
     let
       # Define overlay at top level
       overlay = final: prev: {
@@ -76,6 +80,43 @@
           };
         };
 
+        # Pre-commit hooks configuration
+        pre-commit-check = pre-commit-hooks.lib.${system}.run {
+          src = ./.;
+          hooks = {
+            # Rust formatting
+            rustfmt = {
+              enable = true;
+              entry = "${rustToolchain}/bin/cargo-fmt fmt -- --check --color always";
+              pass_filenames = false;
+            };
+
+            # Rust linting
+            clippy = {
+              enable = true;
+              entry = "${rustToolchain}/bin/cargo-clippy clippy --all-targets --all-features -- -D warnings";
+              files = "\\.rs$";
+              pass_filenames = false;
+            };
+
+            # Cargo check
+            cargo-check = {
+              enable = true;
+              entry = "${rustToolchain}/bin/cargo check --all-features";
+              files = "\\.rs$";
+              pass_filenames = false;
+            };
+
+            # Run tests
+            cargo-test = {
+              enable = true;
+              entry = "${rustToolchain}/bin/cargo test";
+              files = "\\.rs$";
+              pass_filenames = false;
+            };
+          };
+        };
+
       in
       {
         packages = {
@@ -84,31 +125,102 @@
         };
 
         checks = {
+          # Main build check
           build = unicleaner;
 
-          test = pkgs.runCommand "unicleaner-test" {
-            buildInputs = [ rustToolchain ];
-          } ''
-            cd ${./.}
-            cargo test --all
-            touch $out
-          '';
+          # Pre-commit hooks
+          pre-commit = pre-commit-check;
 
-          clippy = pkgs.runCommand "unicleaner-clippy" {
-            buildInputs = [ rustToolchain ];
-          } ''
-            cd ${./.}
-            cargo clippy --all-targets --all-features -- -D warnings
-            touch $out
-          '';
+          # Test check - reuses the main package's cargo artifacts
+          test = rustPlatform.buildRustPackage {
+            pname = "unicleaner-test";
+            version = "1.0.0";
+            src = ./.;
+            cargoLock.lockFile = ./Cargo.lock;
 
-          fmt = pkgs.runCommand "unicleaner-fmt" {
-            buildInputs = [ rustToolchain ];
-          } ''
-            cd ${./.}
-            cargo fmt --all -- --check
-            touch $out
-          '';
+            nativeBuildInputs = with pkgs; [ pkg-config ];
+            buildInputs = with pkgs; [ openssl ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+              pkgs.darwin.apple_sdk.frameworks.Security
+              pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+            ];
+
+            # Override build and check phases
+            buildPhase = ''
+              runHook preBuild
+              cargo test --all --no-fail-fast
+              runHook postBuild
+            '';
+
+            checkPhase = ":";  # Skip default check phase
+            doCheck = false;
+
+            installPhase = ''
+              runHook preInstall
+              mkdir -p $out
+              echo "Tests passed" > $out/test-results
+              runHook postInstall
+            '';
+          };
+
+          # Clippy check
+          clippy = rustPlatform.buildRustPackage {
+            pname = "unicleaner-clippy";
+            version = "1.0.0";
+            src = ./.;
+            cargoLock.lockFile = ./Cargo.lock;
+
+            nativeBuildInputs = with pkgs; [ pkg-config ];
+            buildInputs = with pkgs; [ openssl ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+              pkgs.darwin.apple_sdk.frameworks.Security
+              pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+            ];
+
+            buildPhase = ''
+              runHook preBuild
+              cargo clippy --all-targets --all-features -- -D warnings
+              runHook postBuild
+            '';
+
+            checkPhase = ":";
+            doCheck = false;
+
+            installPhase = ''
+              runHook preInstall
+              mkdir -p $out
+              echo "Clippy checks passed" > $out/clippy-results
+              runHook postInstall
+            '';
+          };
+
+          # Format check - simpler since it doesn't need compilation
+          fmt = rustPlatform.buildRustPackage {
+            pname = "unicleaner-fmt";
+            version = "1.0.0";
+            src = ./.;
+            cargoLock.lockFile = ./Cargo.lock;
+
+            nativeBuildInputs = with pkgs; [ pkg-config ];
+            buildInputs = with pkgs; [ openssl ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+              pkgs.darwin.apple_sdk.frameworks.Security
+              pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+            ];
+
+            buildPhase = ''
+              runHook preBuild
+              cargo fmt --all -- --check
+              runHook postBuild
+            '';
+
+            checkPhase = ":";
+            doCheck = false;
+
+            installPhase = ''
+              runHook preInstall
+              mkdir -p $out
+              echo "Format checks passed" > $out/fmt-results
+              runHook postInstall
+            '';
+          };
         };
 
         devShells.default = pkgs.mkShell {
@@ -132,6 +244,7 @@
           ];
 
           shellHook = ''
+            ${pre-commit-check.shellHook}
             echo "🦀 Unicleaner development environment"
             echo "Rust version: $(rustc --version)"
             echo ""
@@ -143,6 +256,9 @@
             echo "  cargo run -- [args]  - Run unicleaner"
             echo "  cargo tarpaulin      - Code coverage"
             echo "  cargo +nightly fuzz  - Run fuzzing (nightly)"
+            echo ""
+            echo "Pre-commit hooks are installed!"
+            echo "  Run 'pre-commit run --all-files' to check all files"
             echo ""
           '';
         };

@@ -1,14 +1,16 @@
 //! Unicleaner - Detect malicious Unicode characters in source code
 //!
-//! This library provides functionality to scan source code for potentially malicious
-//! Unicode characters including zero-width characters, bidirectional overrides,
-//! homoglyphs, and other security threats.
+//! This library provides functionality to scan source code for potentially
+//! malicious Unicode characters including zero-width characters, bidirectional
+//! overrides, homoglyphs, and other security threats.
 //!
 //! # Features
 //!
 //! - **Zero-width character detection**: U+200B, U+200C, U+200D, U+FEFF
-//! - **Bidirectional override detection**: U+202A-U+202E (Trojan Source attacks)
-//! - **Homoglyph detection**: Visually similar characters from different scripts
+//! - **Bidirectional override detection**: U+202A-U+202E (Trojan Source
+//!   attacks)
+//! - **Homoglyph detection**: Visually similar characters from different
+//!   scripts
 //! - **Multi-encoding support**: UTF-8, UTF-16 (LE/BE), UTF-32 (LE/BE)
 //! - **Configurable rules**: TOML-based configuration with language presets
 //! - **Parallel scanning**: Fast multi-threaded file processing

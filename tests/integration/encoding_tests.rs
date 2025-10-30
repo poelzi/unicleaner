@@ -1,7 +1,6 @@
 //! Integration tests for Unicode encoding detection and handling
 
 use std::fs;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 // T129: Test mixed encoding files

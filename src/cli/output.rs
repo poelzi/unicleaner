@@ -13,7 +13,8 @@ pub enum ColorMode {
     Never,
 }
 
-/// Determine if colors should be enabled based on mode, TTY detection, and NO_COLOR
+/// Determine if colors should be enabled based on mode, TTY detection, and
+/// NO_COLOR
 pub fn should_use_color(mode: ColorMode, stream: ColorStream) -> bool {
     match mode {
         ColorMode::Always => true,

@@ -45,7 +45,7 @@ preset = "rust"
     fs::write(&config_path, config_content).unwrap();
 
     // Test preset application logic
-    assert!(true); // Placeholder
+    // TODO: Implement preset application testing
 }
 
 #[test]
@@ -63,7 +63,7 @@ preset = "javascript"
     "#;
 
     fs::write(&config_path, config_content).unwrap();
-    assert!(true); // Placeholder
+    // TODO: Implement multiple language preset testing
 }
 
 #[test]
@@ -81,13 +81,13 @@ allowed_ranges = [[0x0000, 0xFFFF]]
     fs::write(&config_path, config_content).unwrap();
 
     // Test rule application
-    assert!(true); // Placeholder
+    // TODO: Implement file-specific rule testing
 }
 
 #[test]
 fn test_file_rule_glob_patterns() {
     // Test various glob patterns: *.rs, **/*.js, src/lib.rs
-    assert!(true); // Placeholder
+    // TODO: Implement glob pattern testing
 }
 
 #[test]
@@ -104,7 +104,7 @@ deny_by_default = true
     fs::write(&config_path, config_content).unwrap();
 
     // Without explicit allowlist, all non-ASCII should be flagged
-    assert!(true); // Placeholder
+    // TODO: Implement deny-by-default behavior testing
 }
 
 #[test]
@@ -121,7 +121,7 @@ deny_by_default = false
     fs::write(&config_path, config_content).unwrap();
 
     // Only explicitly denied characters should be flagged
-    assert!(true); // Placeholder
+    // TODO: Implement allow-by-default mode testing
 }
 
 #[test]
@@ -140,7 +140,7 @@ allowed_ranges = [
     "#;
 
     fs::write(&config_path, config_content).unwrap();
-    assert!(true); // Placeholder
+    // TODO: Implement custom Unicode range testing
 }
 
 #[test]
@@ -157,5 +157,5 @@ invalid syntax here
     fs::write(&config_path, invalid_content).unwrap();
 
     // Should fail gracefully with error message
-    assert!(true); // Placeholder
+    // TODO: Implement invalid config error handling testing
 }

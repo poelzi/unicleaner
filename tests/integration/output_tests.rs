@@ -437,7 +437,8 @@ fn test_severity_filtering() {
         "Should have violations without filtering"
     );
 
-    // Now filter by severity=error (should still show the zero-width space which is an error)
+    // Now filter by severity=error (should still show the zero-width space which is
+    // an error)
     let mut cmd = Command::cargo_bin("unicleaner").unwrap();
     cmd.arg("scan")
         .arg("--format")

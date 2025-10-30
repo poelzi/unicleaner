@@ -89,9 +89,9 @@ pub fn get_malicious_patterns() -> Vec<MaliciousPattern> {
             category: MaliciousCategory::BidiOverride,
             code_points: vec![0x202C],
             severity: Severity::Error,
-            description:
-                "PDF character detected - bidirectional text control can alter code meaning"
-                    .to_string(),
+            description: "PDF character detected - bidirectional text control can alter code \
+                          meaning"
+                .to_string(),
         },
         MaliciousPattern {
             name: "left-to-right-override".to_string(),
@@ -137,16 +137,140 @@ pub fn get_malicious_patterns() -> Vec<MaliciousPattern> {
             severity: Severity::Error,
             description: "PDI character detected".to_string(),
         },
+        // Homoglyph patterns - Cyrillic lookalikes
+        MaliciousPattern {
+            name: "cyrillic-homoglyphs".to_string(),
+            category: MaliciousCategory::Homoglyph,
+            code_points: vec![
+                0x0430, // а - Cyrillic Small Letter A (looks like Latin a)
+                0x0435, // е - Cyrillic Small Letter Ie (looks like Latin e)
+                0x043E, // о - Cyrillic Small Letter O (looks like Latin o)
+                0x0440, // р - Cyrillic Small Letter Er (looks like Latin p)
+                0x0441, // с - Cyrillic Small Letter Es (looks like Latin c)
+                0x0445, // х - Cyrillic Small Letter Ha (looks like Latin x)
+                0x0443, // у - Cyrillic Small Letter U (looks like Latin y)
+                0x0410, // А - Cyrillic Capital Letter A
+                0x0415, // Е - Cyrillic Capital Letter Ie
+                0x041E, // О - Cyrillic Capital Letter O
+                0x0420, // Р - Cyrillic Capital Letter Er
+                0x0421, // С - Cyrillic Capital Letter Es
+                0x0425, // Х - Cyrillic Capital Letter Ha
+            ],
+            severity: Severity::Error,
+            description: "Cyrillic homoglyph detected - confusable with Latin characters"
+                .to_string(),
+        },
+        // Greek homoglyphs
+        MaliciousPattern {
+            name: "greek-homoglyphs".to_string(),
+            category: MaliciousCategory::Homoglyph,
+            code_points: vec![
+                0x03B1, // α - Greek Small Letter Alpha (looks like Latin a)
+                0x03BF, // ο - Greek Small Letter Omicron (looks like Latin o)
+                0x03C1, // ρ - Greek Small Letter Rho (looks like Latin p)
+                0x03BD, // ν - Greek Small Letter Nu (looks like Latin v)
+                0x0391, // Α - Greek Capital Letter Alpha
+                0x039F, // Ο - Greek Capital Letter Omicron
+                0x03A1, // Ρ - Greek Capital Letter Rho
+            ],
+            severity: Severity::Error,
+            description: "Greek homoglyph detected - confusable with Latin characters".to_string(),
+        },
+        // Fullwidth forms
+        MaliciousPattern {
+            name: "fullwidth-forms".to_string(),
+            category: MaliciousCategory::Homoglyph,
+            code_points: (0xFF01..=0xFF5E).collect(), // Fullwidth ASCII variants
+            severity: Severity::Warning,
+            description: "Fullwidth character detected - confusable with ASCII".to_string(),
+        },
+        // Mathematical Alphanumeric Symbols
+        MaliciousPattern {
+            name: "mathematical-alphanumeric".to_string(),
+            category: MaliciousCategory::Homoglyph,
+            code_points: {
+                let mut points = Vec::new();
+                // Mathematical Bold (U+1D400–U+1D433)
+                points.extend(0x1D400..=0x1D433);
+                // Mathematical Italic (U+1D434–U+1D467)
+                points.extend(0x1D434..=0x1D467);
+                // Mathematical Bold Italic (U+1D468–U+1D49B)
+                points.extend(0x1D468..=0x1D49B);
+                // Mathematical Script (U+1D49C–U+1D4CF)
+                points.extend(0x1D49C..=0x1D4CF);
+                // Mathematical Bold Script (U+1D4D0–U+1D503)
+                points.extend(0x1D4D0..=0x1D503);
+                // Mathematical Fraktur (U+1D504–U+1D537)
+                points.extend(0x1D504..=0x1D537);
+                // Mathematical Double-Struck (U+1D538–U+1D56B)
+                points.extend(0x1D538..=0x1D56B);
+                // Mathematical Bold Fraktur (U+1D56C–U+1D59F)
+                points.extend(0x1D56C..=0x1D59F);
+                // Mathematical Sans-Serif (U+1D5A0–U+1D5D3)
+                points.extend(0x1D5A0..=0x1D5D3);
+                // Mathematical Sans-Serif Bold (U+1D5D4–U+1D607)
+                points.extend(0x1D5D4..=0x1D607);
+                // Mathematical Sans-Serif Italic (U+1D608–U+1D63B)
+                points.extend(0x1D608..=0x1D63B);
+                // Mathematical Sans-Serif Bold Italic (U+1D63C–U+1D66F)
+                points.extend(0x1D63C..=0x1D66F);
+                // Mathematical Monospace (U+1D670–U+1D6A3)
+                points.extend(0x1D670..=0x1D6A3);
+                // Additional mathematical alphanumerics (U+1D6A4–U+1D7FF)
+                points.extend(0x1D6A4..=0x1D7FF);
+                // Also include Letterlike Symbols that look like regular letters
+                points.push(0x2102); // ℂ
+                points.push(0x210D); // ℍ
+                points.push(0x2115); // ℕ
+                points.push(0x2119); // ℙ
+                points.push(0x211A); // ℚ
+                points.push(0x211D); // ℝ
+                points.push(0x2124); // ℤ
+                points
+            },
+            severity: Severity::Warning,
+            description: "Mathematical alphanumeric character detected".to_string(),
+        },
+        // Combining characters that can be stacked
+        MaliciousPattern {
+            name: "combining-characters".to_string(),
+            category: MaliciousCategory::ZeroWidth,
+            code_points: (0x0300..=0x036F).collect(), // Combining Diacritical Marks
+            severity: Severity::Warning,
+            description: "Combining character detected - can be used for stacking attacks"
+                .to_string(),
+        },
+        // Invisible separators and formatting characters
+        MaliciousPattern {
+            name: "invisible-separators".to_string(),
+            category: MaliciousCategory::ZeroWidth,
+            code_points: vec![
+                0x00A0, // Non-breaking space
+                0x1680, // Ogham Space Mark
+                0x180E, // Mongolian Vowel Separator
+                0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009,
+                0x200A, // Various space characters
+                0x2028, // Line Separator
+                0x2029, // Paragraph Separator
+                0x202F, // Narrow No-Break Space
+                0x205F, // Medium Mathematical Space
+                0x3000, // Ideographic Space (fullwidth space)
+            ],
+            severity: Severity::Warning,
+            description: "Invisible separator detected".to_string(),
+        },
     ]
 }
 
 /// Check if a code point is in any malicious pattern
 pub fn is_malicious(code_point: u32) -> Option<&'static str> {
     match code_point {
+        // Zero-width characters
         0x200B => Some("zero-width-space"),
         0x200C => Some("zero-width-non-joiner"),
         0x200D => Some("zero-width-joiner"),
         0xFEFF => Some("zero-width-no-break-space"),
+        // Bidirectional text controls
         0x202A => Some("left-to-right-embedding"),
         0x202B => Some("right-to-left-embedding"),
         0x202C => Some("pop-directional-formatting"),
@@ -156,6 +280,25 @@ pub fn is_malicious(code_point: u32) -> Option<&'static str> {
         0x2067 => Some("right-to-left-isolate"),
         0x2068 => Some("first-strong-isolate"),
         0x2069 => Some("pop-directional-isolate"),
+        // Cyrillic homoglyphs
+        0x0430 | 0x0435 | 0x043E | 0x0440 | 0x0441 | 0x0445 | 0x0443 | 0x0410 | 0x0415 | 0x041E
+        | 0x0420 | 0x0421 | 0x0425 => Some("cyrillic-homoglyphs"),
+        // Greek homoglyphs
+        0x03B1 | 0x03BF | 0x03C1 | 0x03BD | 0x0391 | 0x039F | 0x03A1 => Some("greek-homoglyphs"),
+        // Fullwidth forms
+        0xFF01..=0xFF5E => Some("fullwidth-forms"),
+        // Mathematical alphanumeric symbols
+        0x1D400..=0x1D7FF => Some("mathematical-alphanumeric"),
+        // Letterlike Symbols that look like letters
+        0x2102 | 0x210D | 0x2115 | 0x2119 | 0x211A | 0x211D | 0x2124 => {
+            Some("mathematical-alphanumeric")
+        }
+        // Combining characters
+        0x0300..=0x036F => Some("combining-characters"),
+        // Invisible separators
+        0x00A0 | 0x1680 | 0x180E | 0x2000..=0x200A | 0x2028 | 0x2029 | 0x202F | 0x205F | 0x3000 => {
+            Some("invisible-separators")
+        }
         _ => None,
     }
 }
@@ -188,8 +331,9 @@ mod tests {
         assert!(patterns.iter().any(|p| p.name == "right-to-left-override"));
         assert!(patterns.iter().any(|p| p.name == "left-to-right-override"));
 
-        // All should be error severity for now
-        assert!(patterns.iter().all(|p| p.severity == Severity::Error));
+        // Should have both Error and Warning severity patterns
+        assert!(patterns.iter().any(|p| p.severity == Severity::Error));
+        assert!(patterns.iter().any(|p| p.severity == Severity::Warning));
     }
 
     #[test]

@@ -60,6 +60,7 @@ criterion = "0.5"
 # Test utilities
 tempfile = "3"
 walkdir = "2"
+serial_test = "3"
 
 [profile.release]
 lto = true

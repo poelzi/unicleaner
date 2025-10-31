@@ -112,36 +112,120 @@ impl Configuration {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
 
     #[test]
     fn test_merge_default_with_user_config() {
-        // User config should override defaults
-        // This is tested in the parser tests
+        let mut default_config = Configuration::default();
+        let user_config = Configuration {
+            deny_by_default: false,
+            ..Default::default()
+        };
+
+        default_config.merge(user_config);
+        assert!(
+            !default_config.deny_by_default,
+            "User config should override default"
+        );
     }
 
     #[test]
     fn test_merge_preserves_user_rules() {
-        // User-defined rules should be preserved
-        // This is tested in the parser tests
+        let mut config1 = Configuration::default();
+        let mut config2 = Configuration::default();
+
+        // Add a rule to config2
+        let rule = rules::FileRule::new("*.rs").expect("Valid pattern");
+        config2.file_rules.push(rule);
+
+        config1.merge(config2);
+        assert_eq!(config1.file_rules.len(), 1, "Should have merged the rule");
     }
 
     #[test]
     fn test_merge_combines_presets() {
-        // Multiple preset references should be combined
-        // This is tested in the parser tests
+        let mut config1 = Configuration::default();
+        let mut config2 = Configuration::default();
+
+        config1
+            .language_presets
+            .insert("rs".to_string(), "rust".to_string());
+        config2
+            .language_presets
+            .insert("py".to_string(), "python".to_string());
+
+        config1.merge(config2);
+        assert_eq!(
+            config1.language_presets.len(),
+            2,
+            "Should combine both presets"
+        );
+        assert!(config1.language_presets.contains_key("rs"));
+        assert!(config1.language_presets.contains_key("py"));
     }
 
     #[test]
     fn test_merge_handles_empty_user_config() {
-        // Empty user config should use all defaults
-        // This is tested in the parser tests
+        let mut default_config = Configuration::default();
+        let original_deny = default_config.deny_by_default;
+
+        let empty_config = Configuration::default();
+        default_config.merge(empty_config);
+
+        assert_eq!(default_config.deny_by_default, original_deny);
     }
 
     #[test]
-    fn test_config_precedence() {
-        // File-specific rules > language presets > global settings
-        // This is tested in the rules tests
+    fn test_is_code_point_allowed_deny_by_default() {
+        let config = Configuration::default(); // deny_by_default = true
+        let path = PathBuf::from("test.txt");
+
+        // ASCII should be allowed
+        assert!(config.is_code_point_allowed(&path, 0x0041)); // 'A'
+        assert!(config.is_code_point_allowed(&path, 0x007F)); // DEL
+
+        // Non-ASCII should be denied
+        assert!(!config.is_code_point_allowed(&path, 0x0080));
+        assert!(!config.is_code_point_allowed(&path, 0x200B)); // Zero-width
+                                                               // space
+    }
+
+    #[test]
+    fn test_is_code_point_allowed_allow_by_default() {
+        let config = Configuration {
+            deny_by_default: false,
+            ..Default::default()
+        };
+        let path = PathBuf::from("test.txt");
+
+        // Everything should be allowed by default
+        assert!(config.is_code_point_allowed(&path, 0x0041));
+        assert!(config.is_code_point_allowed(&path, 0x0080));
+        assert!(config.is_code_point_allowed(&path, 0x200B));
+    }
+
+    #[test]
+    fn test_get_allowed_ranges_no_match() {
+        let config = Configuration::default();
+        let path = PathBuf::from("test.txt");
+
+        let ranges = config.get_allowed_ranges(&path);
+        assert!(ranges.is_none(), "Should return None when no rules match");
+    }
+
+    #[test]
+    fn test_get_allowed_ranges_with_preset() {
+        let mut config = Configuration::default();
+        config
+            .language_presets
+            .insert("rs".to_string(), "rust".to_string());
+
+        let path = PathBuf::from("test.rs");
+        let ranges = config.get_allowed_ranges(&path);
+
+        assert!(
+            ranges.is_some(),
+            "Should return ranges for .rs files with rust preset"
+        );
     }
 }

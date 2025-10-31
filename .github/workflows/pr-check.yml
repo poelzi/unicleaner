@@ -1,0 +1,236 @@
+name: PR Security Check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  scan-pr:
+    name: Scan PR for Malicious Unicode
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for git diff
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v13
+        with:
+          name: unicleaner
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          skipPush: ${{ secrets.CACHIX_AUTH_TOKEN == '' }}
+
+      - name: Build unicleaner
+        run: nix build .#unicleaner --print-build-logs
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # Get list of changed files in this PR
+          git fetch origin ${{ github.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | tr '\n' ' ')
+          echo "files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "Changed files: $CHANGED_FILES"
+
+      - name: Scan changed files
+        id: scan
+        run: |
+          # Create results directory
+          mkdir -p scan-results
+
+          # Scan only changed files
+          if [ -n "${{ steps.changed-files.outputs.files }}" ]; then
+            ./result/bin/unicleaner \
+              --output json \
+              --no-color \
+              ${{ steps.changed-files.outputs.files }} \
+              > scan-results/findings.json || true
+          else
+            echo '{"violations": [], "files_scanned": 0}' > scan-results/findings.json
+          fi
+
+          # Check if we found violations
+          VIOLATION_COUNT=$(jq '.violations | length' scan-results/findings.json)
+          echo "violation_count=$VIOLATION_COUNT" >> $GITHUB_OUTPUT
+          echo "Found $VIOLATION_COUNT violations"
+
+      - name: Parse scan results
+        id: parse
+        run: |
+          # Parse JSON and create markdown report
+          cat > scan-results/report.md << 'EOF'
+          ## 🔍 Unicode Security Scan Results
+
+          EOF
+
+          VIOLATION_COUNT=$(jq '.violations | length' scan-results/findings.json)
+          FILES_SCANNED=$(jq '.files_scanned' scan-results/findings.json)
+
+          if [ "$VIOLATION_COUNT" -eq 0 ]; then
+            cat >> scan-results/report.md << EOF
+          ✅ **No malicious Unicode detected!**
+
+          - Files scanned: $FILES_SCANNED
+          - Violations found: 0
+
+          All files are clean. Great job! 🎉
+          EOF
+          else
+            cat >> scan-results/report.md << EOF
+          ⚠️ **Found $VIOLATION_COUNT potential security issue(s)**
+
+          - Files scanned: $FILES_SCANNED
+          - Violations found: $VIOLATION_COUNT
+
+          ### Violations
+
+          EOF
+
+            # Add each violation
+            jq -r '.violations[] | "#### \(.file_path):\(.line):\(.column)\n\n- **Character**: U+\(.code_point | tonumber | . as $n | "000\($n | tostring)" | .[-4:])\n- **Category**: \(.category)\n- **Severity**: \(.severity)\n- **Issue**: \(.pattern_name)\n- **Description**: \(.description)\n\n---\n"' \
+              scan-results/findings.json >> scan-results/report.md
+          fi
+
+          # Store for comment
+          echo "has_violations=$([ "$VIOLATION_COUNT" -gt 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('scan-results/report.md', 'utf8');
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Unicode Security Scan Results')
+            );
+
+            // Create or update comment
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: report
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: report
+              });
+            }
+
+      - name: Upload scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: unicode-scan-results
+          path: scan-results/
+
+      - name: Fail if violations found (but pass in test corpus)
+        run: |
+          VIOLATION_COUNT=$(jq '.violations | length' scan-results/findings.json)
+
+          # Check if we're scanning test files
+          CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
+          if echo "$CHANGED_FILES" | grep -q "tests/fixtures\|test_"; then
+            echo "✅ Violations found in test corpus - this is expected!"
+            echo "Test corpus intentionally contains malicious Unicode for testing."
+            exit 0
+          elif [ "$VIOLATION_COUNT" -gt 0 ]; then
+            echo "❌ Found $VIOLATION_COUNT violations in non-test code!"
+            echo "Please review and fix the reported Unicode security issues."
+            exit 1
+          else
+            echo "✅ No violations found!"
+            exit 0
+          fi
+
+  scan-full-repo:
+    name: Full Repository Scan (Self-Test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v13
+        with:
+          name: unicleaner
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          skipPush: ${{ secrets.CACHIX_AUTH_TOKEN == '' }}
+
+      - name: Build unicleaner
+        run: nix build .#unicleaner --print-build-logs
+
+      - name: Scan full repository
+        run: |
+          # Scan entire repo excluding build artifacts
+          ./result/bin/unicleaner \
+            --output json \
+            --no-color \
+            . \
+            > full-scan.json || true
+
+      - name: Verify test corpus has violations
+        run: |
+          TOTAL_VIOLATIONS=$(jq '.violations | length' full-scan.json)
+          TEST_VIOLATIONS=$(jq '[.violations[] | select(.file_path | contains("test"))] | length' full-scan.json)
+          NON_TEST_VIOLATIONS=$(jq '[.violations[] | select(.file_path | contains("test") | not)] | length' full-scan.json)
+
+          echo "Total violations: $TOTAL_VIOLATIONS"
+          echo "Test corpus violations: $TEST_VIOLATIONS"
+          echo "Non-test violations: $NON_TEST_VIOLATIONS"
+
+          # Verify test corpus has violations (self-test)
+          if [ "$TEST_VIOLATIONS" -gt 0 ]; then
+            echo "✅ Test corpus contains malicious Unicode (expected)"
+          else
+            echo "⚠️ Warning: Test corpus appears empty"
+          fi
+
+          # Verify non-test code is clean
+          if [ "$NON_TEST_VIOLATIONS" -eq 0 ]; then
+            echo "✅ Non-test code is clean"
+            exit 0
+          else
+            echo "❌ Found $NON_TEST_VIOLATIONS violations in non-test code"
+            jq '.violations[] | select(.file_path | contains("test") | not)' full-scan.json
+            exit 1
+          fi
+
+      - name: Upload full scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-repo-scan
+          path: full-scan.json

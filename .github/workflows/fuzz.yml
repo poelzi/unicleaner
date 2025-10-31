@@ -1,0 +1,75 @@
+name: Fuzzing
+
+on:
+  schedule:
+    # Run fuzzing nightly at 2 AM UTC
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: "Fuzzing duration in seconds"
+        required: false
+        default: "600"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fuzz:
+    name: Fuzz - ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - fuzz_unicode
+          - fuzz_config
+          - fuzz_file_scan
+          - encoding_detection
+          - homoglyph_detector
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Cache fuzz corpus
+        uses: actions/cache@v3
+        with:
+          path: fuzz/corpus
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.sha }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.target }}-
+
+      - name: Run fuzzer
+        run: |
+          DURATION=${{ github.event.inputs.duration || '600' }}
+          cargo fuzz run ${{ matrix.target }} -- -max_total_time=$DURATION -timeout=30
+        continue-on-error: true
+
+      - name: Check for crashes
+        id: check_crashes
+        run: |
+          if [ -d "fuzz/artifacts/${{ matrix.target }}" ]; then
+            CRASH_COUNT=$(find fuzz/artifacts/${{ matrix.target }} -type f | wc -l)
+            echo "crashes=$CRASH_COUNT" >> $GITHUB_OUTPUT
+            if [ $CRASH_COUNT -gt 0 ]; then
+              echo "Found $CRASH_COUNT crashes!"
+              exit 1
+            fi
+          fi
+
+      - name: Upload crashes
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: fuzz-crashes-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+
+      - name: Minimize corpus
+        if: success()
+        run: cargo fuzz cmin ${{ matrix.target }}

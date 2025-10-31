@@ -1,5 +1,12 @@
 # Unicleaner
 
+[![CI](https://github.com/yourusername/unicleaner/workflows/CI/badge.svg)](https://github.com/yourusername/unicleaner/actions/workflows/ci.yml)
+[![PR Security Check](https://github.com/yourusername/unicleaner/workflows/PR%20Security%20Check/badge.svg)](https://github.com/yourusername/unicleaner/actions/workflows/pr-check.yml)
+[![Release](https://github.com/yourusername/unicleaner/workflows/Release/badge.svg)](https://github.com/yourusername/unicleaner/actions/workflows/release.yml)
+[![codecov](https://codecov.io/gh/yourusername/unicleaner/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/unicleaner)
+[![Crates.io](https://img.shields.io/crates/v/unicleaner.svg)](https://crates.io/crates/unicleaner)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
+
 **Detect malicious Unicode characters in source code**
 
 Unicleaner is a security-focused CLI tool that scans source code repositories to detect potentially malicious Unicode characters that could hide backdoors or exploits, including:
@@ -32,6 +39,18 @@ cargo install unicleaner
 ```bash
 nix run github:yourusername/unicleaner
 ```
+
+### Using Docker
+
+```bash
+# Pull from GitHub Container Registry
+docker pull ghcr.io/yourusername/unicleaner:latest
+
+# Scan current directory
+docker run --rm -v "$(pwd):/workspace" ghcr.io/yourusername/unicleaner:latest .
+```
+
+See [Docker Usage Guide](docs/DOCKER.md) for detailed instructions and CI/CD integration examples.
 
 ### From Source
 
@@ -118,11 +137,32 @@ unicleaner list-presets
 
 ### Setup
 
-```bash
-# Using Nix
-nix develop
+#### Using devenv.sh (Recommended)
 
-# Or install Rust manually
+[devenv.sh](https://devenv.sh) provides a complete development environment with pre-commit hooks, helper scripts, and automatic toolchain management:
+
+```bash
+# Install devenv
+nix profile install nixpkgs#devenv
+
+# Enter development environment
+devenv shell
+
+# Run tests with pre-commit hooks
+devenv test
+```
+
+See [docs/DEVENV.md](docs/DEVENV.md) for complete devenv documentation.
+
+#### Using Nix Flakes
+
+```bash
+nix develop
+```
+
+#### Manual Setup
+
+```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
@@ -133,6 +173,15 @@ cargo build
 cargo test
 cargo clippy
 cargo fmt
+```
+
+Or use devenv scripts:
+```bash
+devenv shell
+build-static   # Build static musl binary
+build-docker   # Build Docker image
+coverage       # Generate coverage report
+fuzz          # Run fuzzer
 ```
 
 ### Run

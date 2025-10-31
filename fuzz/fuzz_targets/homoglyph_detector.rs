@@ -1,5 +1,6 @@
-//! Fuzz target for homoglyph detection (T054)
-//! Tests that homoglyph detection never panics on arbitrary Unicode strings
+//! Fuzz target for Unicode detection with arbitrary characters
+//! Tests that Unicode detection never panics on arbitrary Unicode strings and
+//! byte sequences
 
 #![no_main]
 
@@ -10,11 +11,9 @@ use tempfile::NamedTempFile;
 fuzz_target!(|data: &[u8]| {
     // Try to interpret as UTF-8
     if let Ok(text) = std::str::from_utf8(data) {
-        // Test homoglyph detection on individual characters
-        for ch in text.chars() {
-            let _ = unicleaner::unicode::categories::is_homoglyph_risk(ch);
-            let _ = unicleaner::unicode::categories::get_script(ch);
-        }
+        // Test Unicode detector directly on the string
+        let path = std::path::Path::new("fuzz_input.txt");
+        let _ = unicleaner::scanner::unicode_detector::detect_in_string(text, path);
 
         // Test scanning a file with this content
         if let Ok(mut temp) = NamedTempFile::new() {

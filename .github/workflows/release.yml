@@ -1,0 +1,307 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          body: |
+            ## Unicleaner ${{ steps.get_version.outputs.version }}
+
+            ### Installation
+
+            **Download the appropriate binary for your system from the assets below.**
+
+            #### Using Cargo
+            ```bash
+            cargo install unicleaner --version ${{ steps.get_version.outputs.version }}
+            ```
+
+            #### Using Nix
+            ```bash
+            nix run github:yourusername/unicleaner/${{ github.ref_name }}
+            ```
+
+            ### What's Changed
+
+            See the full changelog in [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md)
+
+            ---
+
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.get_version.outputs.version }}...HEAD
+
+  build-release-nix:
+    name: Build Release with Nix (${{ matrix.name }})
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - name: linux-x86_64
+            os: ubuntu-latest
+            system: x86_64-linux
+
+          # macOS ARM64 (M1/M2)
+          - name: macos-arm64
+            os: macos-latest
+            system: aarch64-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v13
+        with:
+          name: unicleaner
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          skipPush: ${{ secrets.CACHIX_AUTH_TOKEN == '' }}
+
+      - name: Build with Nix
+        run: |
+          nix build .#unicleaner --print-build-logs
+
+      - name: Create archive
+        run: |
+          mkdir -p dist
+          cp -L result/bin/unicleaner dist/
+          cd dist
+          tar czf unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.tar.gz unicleaner
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./dist/unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.tar.gz
+          asset_name: unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.tar.gz
+          asset_content_type: application/gzip
+
+  build-release-cargo:
+    name: Build Release with Cargo (${{ matrix.name }})
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64 (musl - static binary)
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            name: linux-x86_64-musl
+
+          # Linux ARM64
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: linux-arm64
+
+          # macOS x86_64 (Intel)
+          - target: x86_64-apple-darwin
+            os: macos-13 # Intel runner
+            name: macos-x86_64
+
+          # Windows x86_64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: windows-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (Linux)
+        if: matrix.os == 'ubuntu-latest' && matrix.target != 'x86_64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu musl-tools
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: release-${{ matrix.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: release-${{ matrix.target }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: release-${{ matrix.target }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Strip binary (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          strip target/${{ matrix.target }}/release/unicleaner || true
+
+      - name: Create archive (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.tar.gz unicleaner
+          mv unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.tar.gz ../../..
+
+      - name: Create archive (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cd target/${{ matrix.target }}/release
+          Compress-Archive -Path unicleaner.exe -DestinationPath ../../../unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.zip
+
+      - name: Upload Release Asset (Unix)
+        if: matrix.os != 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.tar.gz
+          asset_name: unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload Release Asset (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.zip
+          asset_name: unicleaner-${{ needs.create-release.outputs.version }}-${{ matrix.name }}.zip
+          asset_content_type: application/zip
+
+  publish-crate:
+    name: Publish to crates.io
+    needs: [build-release-nix, build-release-cargo]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish to crates.io
+        run: |
+          cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true # Don't fail if already published
+
+  docker-build:
+    name: Build and Push Docker Image
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v13
+        with:
+          name: unicleaner
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          skipPush: ${{ secrets.CACHIX_AUTH_TOKEN == '' }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ !contains(github.ref, 'alpha') && !contains(github.ref, 'beta') && !contains(github.ref, 'rc') }}
+
+      - name: Build Docker image with Nix
+        run: |
+          # Build static binary and Docker image with Nix
+          echo "Building static musl binary..."
+          nix build .#unicleaner-static --print-build-logs
+
+          echo "Building Docker image..."
+          nix build .#docker --print-build-logs
+
+          # Load the image and get its ID
+          IMAGE_PATH=$(readlink -f result)
+          docker load < "$IMAGE_PATH"
+
+          # Get the loaded image name:tag
+          LOADED_IMAGE=$(docker load < "$IMAGE_PATH" | grep -oP '(?<=Loaded image: ).*')
+          echo "Loaded image: $LOADED_IMAGE"
+
+      - name: Tag and push images
+        run: |
+          LOADED_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | head -n1)
+
+          # Tag with all metadata tags
+          TAGS="${{ steps.meta.outputs.tags }}"
+          for tag in $TAGS; do
+            echo "Tagging as: $tag"
+            docker tag "$LOADED_IMAGE" "$tag"
+            echo "Pushing: $tag"
+            docker push "$tag"
+          done

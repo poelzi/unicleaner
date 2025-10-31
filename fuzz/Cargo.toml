@@ -9,6 +9,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+tempfile = "3"
 
 [dependencies.unicleaner]
 path = ".."
@@ -44,5 +45,41 @@ doc = false
 [[bin]]
 name = "homoglyph_detector"
 path = "fuzz_targets/homoglyph_detector.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_git_integration"
+path = "fuzz_targets/fuzz_git_integration.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_walker"
+path = "fuzz_targets/fuzz_walker.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_parallel_scanner"
+path = "fuzz_targets/fuzz_parallel_scanner.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_unicode_ranges"
+path = "fuzz_targets/fuzz_unicode_ranges.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_config_policy"
+path = "fuzz_targets/fuzz_config_policy.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_glob_patterns"
+path = "fuzz_targets/fuzz_glob_patterns.rs"
 test = false
 doc = false

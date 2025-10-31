@@ -67,3 +67,90 @@ impl ScanResult {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::unicode::malicious::{MaliciousCategory, Severity};
+    use std::path::PathBuf;
+
+    fn create_test_violation(severity: Severity) -> Violation {
+        Violation::new(
+            PathBuf::from("test.rs"),
+            1,
+            1,
+            0x200B,
+            "test".to_string(),
+            MaliciousCategory::ZeroWidth,
+            severity,
+            "Test violation".to_string(),
+        )
+    }
+
+    fn create_test_scan_result() -> ScanResult {
+        ScanResult {
+            violations: Vec::new(),
+            files_scanned: 0,
+            files_clean: 0,
+            files_with_violations: 0,
+            errors: Vec::new(),
+            duration: Duration::from_secs(0),
+            config_used: PathBuf::from("test.toml"),
+        }
+    }
+
+    #[test]
+    fn test_scan_result_passed() {
+        let result = create_test_scan_result();
+        assert_eq!(result.files_scanned, 0);
+        assert_eq!(result.files_clean, 0);
+        assert_eq!(result.files_with_violations, 0);
+        assert_eq!(result.violations.len(), 0);
+    }
+
+    #[test]
+    fn test_total_violations() {
+        let mut result = create_test_scan_result();
+        result
+            .violations
+            .push(create_test_violation(Severity::Error));
+        result
+            .violations
+            .push(create_test_violation(Severity::Warning));
+
+        assert_eq!(result.total_violations(), 2);
+    }
+
+    #[test]
+    fn test_filter_by_severity() {
+        let mut result = create_test_scan_result();
+        result.files_scanned = 1;
+        result
+            .violations
+            .push(create_test_violation(Severity::Error));
+        result
+            .violations
+            .push(create_test_violation(Severity::Warning));
+        result
+            .violations
+            .push(create_test_violation(Severity::Info));
+
+        let filtered = result.filter_by_severity(Severity::Warning);
+        assert_eq!(filtered.violations.len(), 2); // Error and Warning only
+    }
+
+    #[test]
+    fn test_filter_by_severity_error_only() {
+        let mut result = create_test_scan_result();
+        result.files_scanned = 1;
+        result
+            .violations
+            .push(create_test_violation(Severity::Error));
+        result
+            .violations
+            .push(create_test_violation(Severity::Warning));
+
+        let filtered = result.filter_by_severity(Severity::Error);
+        assert_eq!(filtered.violations.len(), 1); // Error only
+    }
+}

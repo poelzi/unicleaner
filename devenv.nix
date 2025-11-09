@@ -76,10 +76,10 @@
     '';
 
     fuzz.exec = ''
-      target="''${1:-fuzz_unicode}"
+      target="''${1:-fuzz-unicode}"
       duration="''${2:-60}"
       echo "Running fuzzer: $target for ''${duration}s..."
-      nix run .#fuzz-$target -- -max_total_time=$duration
+      nix run .#$target -- -max_total_time=$duration
     '';
   };
 
@@ -144,7 +144,7 @@
     echo "  build-docker     - Build Docker image"
     echo "  verify-static    - Verify static binary has no dependencies"
     echo "  coverage         - Generate code coverage report"
-    echo "  fuzz [target]    - Run fuzzer (default: fuzz_unicode)"
+    echo "  fuzz [target]    - Run fuzzer (default: fuzz-unicode)"
     echo ""
     echo "Standard commands:"
     echo "  cargo build      - Build the project"

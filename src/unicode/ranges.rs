@@ -30,7 +30,8 @@ impl UnicodeRange {
     }
 
     /// Check if a code point is within this range
-    pub fn contains(&self, code_point: u32) -> bool {
+    pub fn contains(&self, code_point: impl Into<u32>) -> bool {
+        let code_point = code_point.into();
         code_point >= self.start && code_point <= self.end
     }
 
@@ -60,11 +61,11 @@ mod tests {
     fn test_unicode_range_contains() {
         let range = UnicodeRange::new(0x0370, 0x03FF); // Greek range
 
-        assert!(range.contains(0x0370)); // Start boundary
-        assert!(range.contains(0x03FF)); // End boundary
-        assert!(range.contains(0x0385)); // Middle
-        assert!(!range.contains(0x036F)); // Before range
-        assert!(!range.contains(0x0400)); // After range
+        assert!(range.contains(0x0370u32)); // Start boundary
+        assert!(range.contains(0x03FFu32)); // End boundary
+        assert!(range.contains(0x0385u32)); // Middle
+        assert!(!range.contains(0x036Fu32)); // Before range
+        assert!(!range.contains(0x0400u32)); // After range
     }
 
     #[test]
@@ -166,9 +167,9 @@ mod tests {
     fn test_boundary_values() {
         let range = UnicodeRange::new(0x0000, 0x10FFFF); // Full Unicode range
 
-        assert!(range.contains(0x0000));
-        assert!(range.contains(0x10FFFF));
-        assert!(range.contains(0x0080));
+        assert!(range.contains(0x0000u32));
+        assert!(range.contains(0x10FFFFu32));
+        assert!(range.contains(0x0080u32));
     }
 
     #[test]

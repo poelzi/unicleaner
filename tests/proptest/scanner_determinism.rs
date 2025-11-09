@@ -24,7 +24,7 @@ proptest! {
                 for (violation1, violation2) in v1.iter().zip(v2.iter()) {
                     prop_assert_eq!(violation1.line, violation2.line, "Line numbers should match");
                     prop_assert_eq!(violation1.column, violation2.column, "Column numbers should match");
-                    prop_assert_eq!(violation1.message, violation2.message, "Messages should match");
+                    prop_assert_eq!(&violation1.message, &violation2.message, "Messages should match");
                 }
             },
             (Err(_), Err(_)) => {
@@ -81,11 +81,9 @@ proptest! {
 
         // All results should be identical
         if let Some(Ok(first)) = results.first() {
-            for result in &results[1..] {
-                if let Ok(violations) = result {
-                    prop_assert_eq!(first.len(), violations.len(),
-                        "All scans should produce same number of violations");
-                }
+            for violations in results[1..].iter().flatten() {
+                prop_assert_eq!(first.len(), violations.len(),
+                    "All scans should produce same number of violations");
             }
         }
     }

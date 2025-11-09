@@ -11,9 +11,9 @@ proptest! {
         if is_bidi_control(c) {
             let code = c as u32;
             prop_assert!(
-                (code >= 0x202A && code <= 0x202E) ||  // RLE, LRE, PDF, RLO, LRO
-                (code >= 0x2066 && code <= 0x2069) ||  // LRI, RLI, FSI, PDI
-                (code >= 0x200E && code <= 0x200F),    // LRM, RLM
+                (0x202A..=0x202E).contains(&code) ||  // RLE, LRE, PDF, RLO, LRO
+                (0x2066..=0x2069).contains(&code) ||  // LRI, RLI, FSI, PDI
+                (0x200E..=0x200F).contains(&code),    // LRM, RLM
                 "Bidi control char U+{:04X} not in expected range", code
             );
         }

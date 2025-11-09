@@ -10,9 +10,9 @@ proptest! {
         if is_bidi_control(c) {
             let code = c as u32;
             let in_expected_range =
-                (code >= 0x200E && code <= 0x200F) ||  // LRM, RLM
-                (code >= 0x202A && code <= 0x202E) ||  // Embedding/Override
-                (code >= 0x2066 && code <= 0x2069);    // Isolate
+                (0x200E..=0x200F).contains(&code) ||  // LRM, RLM
+                (0x202A..=0x202E).contains(&code) ||  // Embedding/Override
+                (0x2066..=0x2069).contains(&code);    // Isolate
 
             prop_assert!(
                 in_expected_range,
@@ -96,7 +96,7 @@ proptest! {
         if is_bidi_control(c) {
             let code = c as u32;
 
-            let is_isolate = matches!(code, 0x2066 | 0x2067 | 0x2068 | 0x2069);
+            let is_isolate = matches!(code, 0x2066..=0x2069);
             let is_override = matches!(code, 0x202D | 0x202E);
 
             // Can't be both isolate and override

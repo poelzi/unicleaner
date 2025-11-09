@@ -6,11 +6,14 @@ use unicleaner::unicode::categories::is_homoglyph_risk;
 // Property: ASCII letters should never be homoglyph risks
 proptest! {
     #[test]
-    fn ascii_letters_not_risks(c in 'A'..='z') {
-        prop_assert!(
-            !is_homoglyph_risk(c),
-            "ASCII letter '{}' should not be homoglyph risk", c
-        );
+    fn ascii_letters_not_risks(c in prop::char::range('A', 'z')) {
+        // Only test actual letters (skips punctuation between Z and a)
+        if c.is_ascii_alphabetic() {
+            prop_assert!(
+                !is_homoglyph_risk(c),
+                "ASCII letter '{}' should not be homoglyph risk", c
+            );
+        }
     }
 }
 
@@ -91,15 +94,19 @@ proptest! {
 
         let result = unicleaner::scanner::file_scanner::scan_file(temp.path());
 
-        if let Ok(violations) = result {
-            let has_math = violations.iter().any(|v| {
-                v.message.contains("mathematical") ||
-                v.message.contains("U+1D4") ||
-                v.message.contains("homoglyph")
-            });
+        prop_assert!(result.is_ok(), "Scanner should not panic");
 
-            prop_assert!(has_math, "Should detect mathematical variant");
-        }
+        let violations = result.unwrap();
+        let has_math = violations.iter().any(|v| {
+            let msg_lower = v.message.to_lowercase();
+            let pattern_lower = v.pattern_name.to_lowercase();
+            msg_lower.contains("mathematical") ||
+            msg_lower.contains("homoglyph") ||
+            pattern_lower.contains("mathematical") ||
+            (v.code_point >= 0x1D400 && v.code_point <= 0x1D7FF)
+        });
+
+        prop_assert!(has_math, "Should detect mathematical variant (U+1D44E), found {} violations", violations.len());
     }
 }
 
@@ -119,15 +126,19 @@ proptest! {
 
         let result = unicleaner::scanner::file_scanner::scan_file(temp.path());
 
-        if let Ok(violations) = result {
-            let has_fullwidth = violations.iter().any(|v| {
-                v.message.contains("fullwidth") ||
-                v.message.contains("U+FF") ||
-                v.message.contains("homoglyph")
-            });
+        prop_assert!(result.is_ok(), "Scanner should not panic");
 
-            prop_assert!(has_fullwidth, "Should detect fullwidth character");
-        }
+        let violations = result.unwrap();
+        let has_fullwidth = violations.iter().any(|v| {
+            let msg_lower = v.message.to_lowercase();
+            let pattern_lower = v.pattern_name.to_lowercase();
+            msg_lower.contains("fullwidth") ||
+            msg_lower.contains("homoglyph") ||
+            pattern_lower.contains("fullwidth") ||
+            (v.code_point >= 0xFF01 && v.code_point <= 0xFF5E)
+        });
+
+        prop_assert!(has_fullwidth, "Should detect fullwidth character (U+FF41), found {} violations", violations.len());
     }
 }
 
@@ -161,9 +172,11 @@ proptest! {
             );
         }
     }
+//
 }
 
-// Property: Homoglyph detection should not produce false positives on clean text
+// Property: Homoglyph detection should not produce false positives on clean
+// text
 proptest! {
     #[test]
     fn no_false_positives_on_ascii(text in "[a-zA-Z0-9 ]{1,100}") {

@@ -88,7 +88,7 @@ proptest! {
     #[test]
     fn all_valid_codepoints_checkable(code in 0u32..=0x10FFFF) {
         // Skip surrogates
-        if code >= 0xD800 && code <= 0xDFFF {
+        if (0xD800..=0xDFFF).contains(&code) {
             return Ok(());
         }
 

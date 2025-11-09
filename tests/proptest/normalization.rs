@@ -33,12 +33,12 @@ proptest! {
         let nfd: String = s.nfd().collect();
 
         // NFC of NFD should equal NFC of original
-        let nfc_of_nfd: String = nfd.nfc().collect();
-        prop_assert_eq!(nfc, nfc_of_nfd, "NFC(NFD(s)) should equal NFC(s)");
+        let nfc_of_nfd: String = nfd.clone().nfc().collect();
+        prop_assert_eq!(&nfc, &nfc_of_nfd, "NFC(NFD(s)) should equal NFC(s)");
 
         // NFD of NFC should equal NFD of original
         let nfd_of_nfc: String = nfc.nfd().collect();
-        prop_assert_eq!(nfd, nfd_of_nfc, "NFD(NFC(s)) should equal NFD(s)");
+        prop_assert_eq!(&nfd, &nfd_of_nfc, "NFD(NFC(s)) should equal NFD(s)");
     }
 }
 
@@ -92,17 +92,28 @@ proptest! {
     }
 }
 
-// Property: Combining marks are preserved under normalization
+// Property: Combining marks are preserved or canonically decomposed under
+// normalization
 proptest! {
     #[test]
-    fn combining_marks_preserved(base in 'a'..='z', combining in '\u{0300}'..='\u{036F}') {
+    fn combining_marks_preserved(
+        base in prop::char::range('a', 'z'),
+        combining in prop::char::range('\u{0300}', '\u{036F}')
+    ) {
         let s = format!("{}{}", base, combining);
         let nfd: String = s.nfd().collect();
 
-        // NFD should still contain the combining mark
+        // NFD should contain some combining mark (may be canonically equivalent)
+        // or the original mark if it's in canonical form
+        let has_combining = nfd.chars().any(|c| {
+            let code = c as u32;
+            (0x0300..=0x036F).contains(&code)
+        });
+
         prop_assert!(
-            nfd.contains(combining),
-            "NFD should preserve combining mark U+{:04X}", combining as u32
+            has_combining || nfd.contains(combining),
+            "NFD should preserve or canonically decompose combining mark U+{:04X}",
+            combining as u32
         );
     }
 }

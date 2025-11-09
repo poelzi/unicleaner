@@ -66,7 +66,7 @@ pub fn load_config(path: impl AsRef<Path>) -> Result<Configuration, Error> {
     parse_config(&contents, path)
 }
 
-/// Parse TOML configuration string
+/// Parse TOML configuration string with a path context
 pub fn parse_config(toml: &str, path: &Path) -> Result<Configuration, Error> {
     let config_file: ConfigFile =
         toml::from_str(toml).map_err(|e| Error::Config(format!("Failed to parse TOML: {}", e)))?;
@@ -104,6 +104,14 @@ pub fn parse_config(toml: &str, path: &Path) -> Result<Configuration, Error> {
     crate::config::rules::sort_rules_by_priority(&mut config.file_rules);
 
     Ok(config)
+}
+
+/// Parse TOML configuration string without a file path (for testing)
+///
+/// This is a convenience wrapper around `parse_config` that uses an empty path.
+/// Useful for testing configuration parsing without needing a file.
+pub fn parse_config_str(toml: &str) -> Result<Configuration, Error> {
+    parse_config(toml, Path::new(""))
 }
 
 #[cfg(test)]

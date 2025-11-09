@@ -3,7 +3,6 @@
 
 use proptest::prelude::*;
 use std::io::Write;
-use std::path::PathBuf;
 use tempfile::NamedTempFile;
 
 // Property: Scanner should never panic on arbitrary UTF-8 strings

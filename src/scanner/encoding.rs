@@ -280,6 +280,18 @@ pub fn detect_decode_with_encoding(bytes: &[u8]) -> Result<(String, DetectedEnco
     ))
 }
 
+/// Detect the encoding of a file by path
+///
+/// This is a convenience function for property tests that reads the file
+/// and returns the detected encoding name as a string.
+pub fn detect_encoding(path: &std::path::Path) -> Result<String> {
+    use std::fs;
+
+    let bytes = fs::read(path)?;
+    let (_content, encoding) = detect_decode_with_encoding(&bytes)?;
+    Ok(encoding.name().to_string())
+}
+
 /// Check if file appears to be binary (null bytes in first 8KB)
 pub fn is_binary(bytes: &[u8]) -> bool {
     let check_len = bytes.len().min(8192);

@@ -84,6 +84,13 @@ pub enum Command {
 
     /// List available language presets
     ListPresets,
+
+    /// List available Unicode block names for use in allowed_blocks config
+    ListBlocks {
+        /// Optional filter to search for specific blocks by name
+        #[arg(value_name = "FILTER")]
+        filter: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -232,6 +239,9 @@ impl Clone for Command {
                 force: *force,
             },
             Command::ListPresets => Command::ListPresets,
+            Command::ListBlocks { filter } => Command::ListBlocks {
+                filter: filter.clone(),
+            },
         }
     }
 }

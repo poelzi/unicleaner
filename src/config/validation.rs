@@ -1,7 +1,7 @@
 //! Configuration validation logic
 
-use crate::config::{presets, Configuration};
 use crate::Error;
+use crate::config::{Configuration, presets};
 
 /// Validate a configuration
 pub fn validate_config(config: &Configuration) -> Result<(), Error> {

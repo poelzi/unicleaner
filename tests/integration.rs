@@ -25,3 +25,6 @@ mod output_tests;
 
 #[path = "integration/edge_cases.rs"]
 mod edge_cases;
+
+#[path = "integration/block_config_tests.rs"]
+mod block_config_tests;

@@ -1,4 +1,10 @@
-{ pkgs, lib, config, inputs, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  inputs,
+  ...
+}:
 
 {
   # Project metadata
@@ -30,7 +36,13 @@
   languages.rust = {
     enable = true;
     channel = "stable";
-    components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-src" ];
+    components = [
+      "rustc"
+      "cargo"
+      "clippy"
+      "rustfmt"
+      "rust-src"
+    ];
   };
 
   # https://devenv.sh/processes/
@@ -111,6 +123,7 @@
       name = "trim trailing whitespace";
       entry = "${pkgs.python3Packages.pre-commit-hooks}/bin/trailing-whitespace-fixer";
       types = [ "text" ];
+      excludes = [ "tests/integration/fixtures/encodings/" ];
     };
 
     end-of-file-fixer = {
@@ -118,6 +131,7 @@
       name = "fix end of files";
       entry = "${pkgs.python3Packages.pre-commit-hooks}/bin/end-of-file-fixer";
       types = [ "text" ];
+      excludes = [ "tests/integration/fixtures/encodings/" ];
     };
   };
 

@@ -11,7 +11,7 @@ Build a CLI security tool that scans source code repositories to detect maliciou
 
 ## Technical Context
 
-**Language/Version**: Rust (stable channel, currently 1.75+)  
+**Language/Version**: Rust (stable channel, edition 2024, MSRV 1.85+)  
 **Primary Dependencies**: clap v4 (CLI), toml v0.8 + serde v1 (config), unicode-segmentation v1.10 (Unicode), git2 v0.18 (Git), chardetng v0.1 (encoding), owo-colors v4 (output)  
 **Storage**: Configuration files (TOML), Unicode character database (embedded), no persistent database required  
 **Testing**: cargo test (unit), assert_cmd v2 + predicates v3 (integration), cargo-fuzz v0.11 (fuzzing), proptest v1 (property-based)  

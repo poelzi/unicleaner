@@ -7,7 +7,17 @@ use libfuzzer_sys::fuzz_target;
 use std::path::PathBuf;
 use unicleaner::scanner::walker::{walk_paths, WalkConfig};
 
+// Suppress LeakSanitizer for this target - the ignore crate's thread pool
+// allocations are reported as leaks under ASAN but are not actual leaks.
+extern "C" {
+    fn __lsan_disable();
+    fn __lsan_enable();
+}
+
 fuzz_target!(|data: &[u8]| {
+    unsafe {
+        __lsan_disable();
+    }
     if let Ok(paths_str) = std::str::from_utf8(data) {
         // Split on newlines to create multiple paths
         let paths: Vec<PathBuf> = paths_str
@@ -26,16 +36,22 @@ fuzz_target!(|data: &[u8]| {
                     follow_links: true,
                     max_depth: Some(5),
                     respect_gitignore: true,
+                    respect_hidden: true,
+                    threads: 1,
                 },
                 WalkConfig {
                     follow_links: false,
                     max_depth: Some(1),
                     respect_gitignore: false,
+                    respect_hidden: false,
+                    threads: 1,
                 },
                 WalkConfig {
                     follow_links: true,
                     max_depth: None,
                     respect_gitignore: true,
+                    respect_hidden: false,
+                    threads: 1,
                 },
             ];
 
@@ -43,5 +59,8 @@ fuzz_target!(|data: &[u8]| {
                 let _ = walk_paths(&paths, &config);
             }
         }
+    }
+    unsafe {
+        __lsan_enable();
     }
 });

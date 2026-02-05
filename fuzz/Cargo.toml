@@ -1,7 +1,7 @@
 [package]
 name = "unicleaner-fuzz"
 version = "0.0.0"
-edition = "2021"
+edition = "2024"
 publish = false
 
 [package.metadata]
@@ -81,5 +81,11 @@ doc = false
 [[bin]]
 name = "fuzz_glob_patterns"
 path = "fuzz_targets/fuzz_glob_patterns.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_block_resolve"
+path = "fuzz_targets/fuzz_block_resolve.rs"
 test = false
 doc = false

@@ -1,7 +1,7 @@
 // Benchmark for medium repository scanning (T082)
 // ~1000 files
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
 use std::io::Write;
 use tempfile::TempDir;

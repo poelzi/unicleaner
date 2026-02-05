@@ -140,10 +140,12 @@ mod tests {
     fn test_preset_contains_basic_latin() {
         let preset = get_preset("rust").unwrap();
         // Should include Basic Latin printable range
-        assert!(preset
-            .allowed_ranges
-            .iter()
-            .any(|r| r.start == 0x0020 && r.end == 0x007E));
+        assert!(
+            preset
+                .allowed_ranges
+                .iter()
+                .any(|r| r.start == 0x0020 && r.end == 0x007E)
+        );
     }
 
     #[test]
@@ -152,10 +154,12 @@ mod tests {
         assert!(!preset.description.is_empty());
 
         // Check that ranges also have descriptions
-        assert!(preset
-            .allowed_ranges
-            .iter()
-            .all(|r| r.description.is_some()));
+        assert!(
+            preset
+                .allowed_ranges
+                .iter()
+                .all(|r| r.description.is_some())
+        );
     }
 
     #[test]

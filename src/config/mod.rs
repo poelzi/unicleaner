@@ -187,7 +187,7 @@ mod tests {
         // Non-ASCII should be denied
         assert!(!config.is_code_point_allowed(&path, 0x0080));
         assert!(!config.is_code_point_allowed(&path, 0x200B)); // Zero-width
-                                                               // space
+        // space
     }
 
     #[test]

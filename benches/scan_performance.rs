@@ -1,6 +1,6 @@
 //! Performance benchmarks for unicleaner scanning operations
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;

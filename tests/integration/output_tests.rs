@@ -1,6 +1,6 @@
 //! Integration tests for output formats and CLI flags
 
-use assert_cmd::Command;
+use assert_cmd::cargo_bin_cmd;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
@@ -29,7 +29,7 @@ fn test_json_output_format() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg("--format").arg("json").arg(&test_file);
 
     // Exit code 1 is expected when violations are found
@@ -45,7 +45,7 @@ fn test_json_output_is_valid() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg("--format").arg("json").arg(&test_file);
 
     let output = cmd.output().unwrap();
@@ -65,7 +65,7 @@ fn test_json_compact_with_quiet() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_clean_test_file(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan")
         .arg("--format")
         .arg("json")
@@ -89,7 +89,7 @@ fn test_color_flag_never() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg("--color").arg("never").arg(&test_file);
 
     let output = cmd.output().unwrap();
@@ -107,7 +107,7 @@ fn test_color_flag_always() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg("--color").arg("always").arg(&test_file);
 
     let output = cmd.output().unwrap();
@@ -125,7 +125,7 @@ fn test_no_color_flag() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg("--no-color").arg(&test_file);
 
     let output = cmd.output().unwrap();
@@ -143,7 +143,7 @@ fn test_no_color_env_variable() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan")
         .arg("--color")
         .arg("auto")
@@ -165,7 +165,7 @@ fn test_github_output_format() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan")
         .arg("--format")
         .arg("github")
@@ -182,7 +182,7 @@ fn test_gitlab_output_format() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan")
         .arg("--format")
         .arg("gitlab")
@@ -199,7 +199,7 @@ fn test_quiet_flag() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_clean_test_file(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg("--quiet").arg(&test_file);
 
     cmd.assert()
@@ -212,7 +212,7 @@ fn test_verbose_flag() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg("--verbose").arg(&test_file);
 
     let output = cmd.output().unwrap();
@@ -227,7 +227,7 @@ fn test_human_output_default() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_clean_test_file(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg(&test_file);
 
     cmd.assert()
@@ -241,7 +241,7 @@ fn test_json_schema_contract() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
 
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg("--format").arg("json").arg(&test_file);
 
     let output = cmd.output().unwrap();
@@ -424,7 +424,7 @@ fn test_severity_filtering() {
     let test_file = create_test_file_with_violation(&temp_dir);
 
     // First, check that violations exist without filtering
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan").arg("--format").arg("json").arg(&test_file);
 
     let output = cmd.output().unwrap();
@@ -439,7 +439,7 @@ fn test_severity_filtering() {
 
     // Now filter by severity=error (should still show the zero-width space which is
     // an error)
-    let mut cmd = Command::cargo_bin("unicleaner").unwrap();
+    let mut cmd = cargo_bin_cmd!("unicleaner");
     cmd.arg("scan")
         .arg("--format")
         .arg("json")

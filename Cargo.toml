@@ -1,8 +1,8 @@
 [package]
 name = "unicleaner"
 version = "1.0.0-alpha1"
-edition = "2021"
-rust-version = "1.75"
+edition = "2024"
+rust-version = "1.85"
 authors = ["Unicleaner Contributors"]
 description = "Detect malicious Unicode characters in source code"
 license = "MIT OR Apache-2.0"
@@ -44,6 +44,9 @@ num_cpus = "1.16"
 # Error handling
 thiserror = "1"
 anyhow = "1"
+unicode-blocks = "0.1.9"
+strsim = "0.11.1"
+once_cell = "1.21.3"
 
 [dev-dependencies]
 # Integration testing

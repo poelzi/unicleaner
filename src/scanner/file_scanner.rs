@@ -1,10 +1,10 @@
 //! Core file scanning logic
 
+use crate::Result;
 use crate::config::Configuration;
 use crate::report::Violation;
 use crate::scanner::encoding::{detect_decode_with_encoding, is_binary};
 use crate::scanner::unicode_detector::detect_in_string;
-use crate::Result;
 use std::fs;
 use std::path::Path;
 

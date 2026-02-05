@@ -11,7 +11,7 @@ Enhance the unicleaner test suite to comprehensively cover modern Unicode attack
 
 ## Technical Context
 
-**Language/Version**: Rust (stable channel, currently 1.75+)  
+**Language/Version**: Rust (stable channel, edition 2024, MSRV 1.85+)  
 **Primary Dependencies**: proptest, cargo-fuzz, existing unicleaner crates  
 **Storage**: N/A (test enhancement)  
 **Testing**: cargo test, proptest for property-based, cargo-fuzz for fuzzing  

@@ -1,8 +1,33 @@
 //! Integration tests for configuration loading and application
 
+use assert_cmd::cargo_bin_cmd;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
+
+/// Test that the example config file (examples/unicleaner.toml) is valid and can be loaded
+/// by the scanner without errors. This ensures the shipped example stays in sync with
+/// the actual config format.
+#[test]
+fn test_example_config_loads_successfully() {
+    let temp = TempDir::new().unwrap();
+    let test_file = temp.path().join("clean.rs");
+    fs::write(&test_file, "fn main() {\n    println!(\"hello\");\n}\n").unwrap();
+
+    let example_config = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/unicleaner.toml");
+    assert!(
+        example_config.exists(),
+        "Example config must exist at examples/unicleaner.toml"
+    );
+
+    let mut cmd = cargo_bin_cmd!("unicleaner");
+    cmd.arg("scan")
+        .arg("--config")
+        .arg(&example_config)
+        .arg(&test_file);
+
+    cmd.assert().success();
+}
 
 #[test]
 fn test_load_config_file() {

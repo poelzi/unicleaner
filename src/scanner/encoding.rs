@@ -351,7 +351,7 @@ mod tests {
         // UTF-16 LE BOM: FF FE
         let text = "Hello";
         let mut bytes = vec![0xFF, 0xFE]; // UTF-16 LE BOM
-                                          // Encode "Hello" in UTF-16 LE
+        // Encode "Hello" in UTF-16 LE
         for ch in text.encode_utf16() {
             bytes.push(ch as u8);
             bytes.push((ch >> 8) as u8);
@@ -368,7 +368,7 @@ mod tests {
         // UTF-16 BE BOM: FE FF
         let text = "Hello";
         let mut bytes = vec![0xFE, 0xFF]; // UTF-16 BE BOM
-                                          // Encode "Hello" in UTF-16 BE
+        // Encode "Hello" in UTF-16 BE
         for ch in text.encode_utf16() {
             bytes.push((ch >> 8) as u8);
             bytes.push(ch as u8);
@@ -385,7 +385,7 @@ mod tests {
         // UTF-32 LE BOM: FF FE 00 00
         let text = "Hi";
         let mut bytes = vec![0xFF, 0xFE, 0x00, 0x00]; // UTF-32 LE BOM
-                                                      // Encode "Hi" in UTF-32 LE
+        // Encode "Hi" in UTF-32 LE
         for ch in text.chars() {
             let code = ch as u32;
             bytes.push(code as u8);
@@ -405,7 +405,7 @@ mod tests {
         // UTF-32 BE BOM: 00 00 FE FF
         let text = "Hi";
         let mut bytes = vec![0x00, 0x00, 0xFE, 0xFF]; // UTF-32 BE BOM
-                                                      // Encode "Hi" in UTF-32 BE
+        // Encode "Hi" in UTF-32 BE
         for ch in text.chars() {
             let code = ch as u32;
             bytes.push((code >> 24) as u8);

@@ -1,8 +1,8 @@
-# Specification Quality Checklist: Enhance Unicode Test Suite
+# Specification Quality Checklist: Named Unicode Range Support
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2025-10-23
-**Feature**: [Link to spec.md](/specs/002-enhance-unicode-tests/spec.md)
+**Created**: 2026-02-04
+**Feature**: [spec.md](../spec.md)
 
 ## Content Quality
 
@@ -31,5 +31,6 @@
 
 ## Notes
 
-- All items pass validation. The specification is complete and ready for the next phase.
-- Assumptions section documents reasonable defaults based on project context.
+- All items pass. Spec is ready for `/speckit.clarify` or `/speckit.plan`.
+- The specific Unicode data crate choice is deliberately deferred to the planning phase as an implementation detail.
+- Aliases list in FR-004 provides a minimum set; more can be added during implementation.

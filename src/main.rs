@@ -2,14 +2,15 @@ use std::path::PathBuf;
 use std::process;
 use std::time::Instant;
 use unicleaner::cli::args::{Args, Command, OutputFormat};
-use unicleaner::cli::output::{should_use_color, ColorStream};
+use unicleaner::cli::output::{ColorStream, should_use_color};
 use unicleaner::config::presets;
+use unicleaner::report::ScanResult;
 use unicleaner::report::formatter::format_human;
 use unicleaner::report::json::{format_json, format_json_compact};
-use unicleaner::report::ScanResult;
 use unicleaner::scanner::git_diff;
 use unicleaner::scanner::parallel::scan_files_parallel;
-use unicleaner::scanner::walker::{walk_paths, WalkConfig};
+use unicleaner::scanner::walker::{WalkConfig, walk_paths};
+use unicleaner::unicode::blocks::BlockRegistry;
 
 fn main() {
     // Parse command line arguments
@@ -39,6 +40,10 @@ fn main() {
         },
         Command::ListPresets => {
             run_list_presets();
+            0
+        }
+        Command::ListBlocks { filter } => {
+            run_list_blocks(filter.as_deref());
             0
         }
     };
@@ -257,6 +262,41 @@ deny_by_default = true
     println!("Edit this file to customize Unicode detection rules.");
 
     Ok(())
+}
+
+fn run_list_blocks(filter: Option<&str>) {
+    let blocks = BlockRegistry::list_blocks(filter);
+
+    if blocks.is_empty() {
+        if let Some(f) = filter {
+            println!("No Unicode blocks matching \"{}\"", f);
+        } else {
+            println!("No Unicode blocks found");
+        }
+        return;
+    }
+
+    println!(
+        "Unicode Blocks (Unicode {}){}\n",
+        unicode_blocks::VERSION,
+        filter
+            .map(|f| format!(", filter: \"{}\"", f))
+            .unwrap_or_default()
+    );
+    println!("  {:<45} {:<20} Aliases", "Name", "Range");
+    println!("  {}", "-".repeat(80));
+
+    for block in &blocks {
+        let range = format!("U+{:04X}-U+{:04X}", block.start, block.end);
+        let aliases = if block.aliases.is_empty() {
+            String::new()
+        } else {
+            block.aliases.join(", ")
+        };
+        println!("  {:<45} {:<20} {}", block.name, range, aliases);
+    }
+
+    println!("\n  Total: {} blocks", blocks.len());
 }
 
 fn run_list_presets() {

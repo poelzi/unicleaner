@@ -1,7 +1,7 @@
 //! TOML configuration file parsing
 
-use crate::config::{Configuration, FileRule};
 use crate::Error;
+use crate::config::{Configuration, FileRule};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
@@ -51,6 +51,9 @@ struct RuleConfig {
     allowed_ranges: Vec<[u32; 2]>,
 
     #[serde(default)]
+    allowed_blocks: Vec<String>,
+
+    #[serde(default)]
     denied_characters: Vec<u32>,
 }
 
@@ -90,6 +93,13 @@ pub fn parse_config(toml: &str, path: &Path) -> Result<Configuration, Error> {
         // Add allowed ranges
         for range in rule_config.allowed_ranges {
             rule = rule.with_allowed_range(range[0], range[1], None);
+        }
+
+        // Resolve named blocks to ranges
+        for block_name in &rule_config.allowed_blocks {
+            let range = crate::unicode::blocks::BlockRegistry::resolve(block_name)
+                .map_err(|e| Error::Config(format!("{}", e)))?;
+            rule = rule.with_allowed_range(range.start, range.end, range.description);
         }
 
         // Add denied characters

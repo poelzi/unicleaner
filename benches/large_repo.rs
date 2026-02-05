@@ -1,7 +1,7 @@
 // Benchmark for large repository scanning (T083)
 // ~10000 files
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use rayon::prelude::*;
 use std::fs;
 use std::io::Write;

@@ -137,7 +137,7 @@ Code MUST be documented for both users and developers.
 
 ## Technology Stack
 
-**Language**: Rust (stable channel)
+**Language**: Rust (stable channel, edition 2024, MSRV 1.85+)
 **Build System**: Cargo
 **Package Manager**: Cargo + Nix
 **Nix**: Flakes-enabled Nix with flake.nix

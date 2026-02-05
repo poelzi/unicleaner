@@ -65,7 +65,9 @@ mod tests {
 
         // Test 1: NO_COLOR set to any value (e.g., "1")
         // According to https://no-color.org/, any value means colors disabled
-        env::set_var("NO_COLOR", "1");
+        // SAFETY: This test is run serially (#[serial_test::serial]) so no
+        // other threads are concurrently reading environment variables.
+        unsafe { env::set_var("NO_COLOR", "1") };
         assert!(
             is_no_color_set(),
             "NO_COLOR standard: is_no_color_set() should return true when NO_COLOR='1'"
@@ -73,14 +75,14 @@ mod tests {
 
         // Test 2: NO_COLOR set to empty string
         // Per NO_COLOR standard, even empty value means colors disabled
-        env::set_var("NO_COLOR", "");
+        unsafe { env::set_var("NO_COLOR", "") };
         assert!(
             is_no_color_set(),
             "NO_COLOR standard: is_no_color_set() should return true when NO_COLOR='' (empty)"
         );
 
         // Test 3: NO_COLOR unset
-        env::remove_var("NO_COLOR");
+        unsafe { env::remove_var("NO_COLOR") };
         assert!(
             !is_no_color_set(),
             "NO_COLOR standard: is_no_color_set() should return false when NO_COLOR is unset"
@@ -88,8 +90,8 @@ mod tests {
 
         // Restore original state
         match original {
-            Some(val) => env::set_var("NO_COLOR", val),
-            None => env::remove_var("NO_COLOR"),
+            Some(val) => unsafe { env::set_var("NO_COLOR", val) },
+            None => unsafe { env::remove_var("NO_COLOR") },
         }
     }
 

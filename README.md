@@ -335,7 +335,6 @@ All changed files are safe to merge!
 - [Configuration Examples](examples/unicleaner.toml)
 - [CI/CD Integration](examples/)
 - [Docker Usage Guide](docs/DOCKER.md)
-- [devenv.sh Development Environment](docs/DEVENV.md)
 - [Nix Build System](docs/NIX_BUILD_SYSTEM.md)
 
 ## Real-World Use Cases
@@ -537,24 +536,7 @@ jq -r '.violations[] |
 
 ### Setup
 
-#### Using devenv.sh (Recommended)
-
-[devenv.sh](https://devenv.sh) provides a complete development environment with pre-commit hooks, helper scripts, and automatic toolchain management:
-
-```bash
-# Install devenv
-nix profile install nixpkgs#devenv
-
-# Enter development environment
-devenv shell
-
-# Run tests with pre-commit hooks
-devenv test
-```
-
-See [docs/DEVENV.md](docs/DEVENV.md) for complete devenv documentation.
-
-#### Using Nix Flakes
+#### Using Nix Flakes (Recommended)
 
 ```bash
 nix develop
@@ -575,13 +557,17 @@ cargo clippy
 cargo fmt
 ```
 
-Or use devenv scripts:
+Or use `just` recipes:
+
 ```bash
-devenv shell
-build-static   # Build static musl binary
-build-docker   # Build Docker image
-coverage       # Generate coverage report
-fuzz          # Run fuzzer
+just build
+just test
+just check
+just fmt-check
+just build-static
+just build-docker
+just coverage
+just fuzz fuzz-parallel-scanner 30
 ```
 
 ### Run

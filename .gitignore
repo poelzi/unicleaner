@@ -38,11 +38,6 @@ result
 result-*
 .direnv/
 
-# devenv
-.devenv/
-.devenv.flake.nix
-devenv.lock
-
 # Fuzzing
 fuzz/corpus/
 fuzz/artifacts/

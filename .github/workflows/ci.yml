@@ -7,35 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  devenv-test:
-    name: Test with devenv (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v16
-        with:
-          name: unicleaner
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-          skipPush: ${{ secrets.CACHIX_AUTH_TOKEN == '' }}
-
-      - name: Install devenv
-        run: nix profile install nixpkgs#devenv
-
-      - name: Build the devenv shell and run tests
-        run: devenv test
-
   nix-ci:
     name: Nix Build & Check (${{ matrix.system }})
     runs-on: ${{ matrix.os }}
@@ -79,43 +50,6 @@ jobs:
       - name: Check formatting
         run: nix build .#checks.${{ matrix.system }}.fmt --print-build-logs
 
-  devenv-checks:
-    name: Devenv Checks (clippy, fmt, build)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v16
-        with:
-          name: unicleaner
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-          skipPush: ${{ secrets.CACHIX_AUTH_TOKEN == '' }}
-
-      - name: Install devenv
-        run: nix profile install nixpkgs#devenv
-
-      - name: Run clippy
-        shell: devenv shell bash -- -e {0}
-        run: |
-          cargo clippy --all-targets --all-features -- -D warnings
-
-      - name: Check formatting
-        shell: devenv shell bash -- -e {0}
-        run: |
-          cargo fmt --all -- --check
-
-      - name: Build
-        shell: devenv shell bash -- -e {0}
-        run: |
-          cargo build --all-features
-
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
@@ -135,13 +69,9 @@ jobs:
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
           skipPush: ${{ secrets.CACHIX_AUTH_TOKEN == '' }}
 
-      - name: Install devenv
-        run: nix profile install nixpkgs#devenv
-
       - name: Generate coverage
-        shell: devenv shell bash -- -e {0}
         run: |
-          cargo tarpaulin \
+          nix develop --command cargo tarpaulin \
             --out Xml \
             --out Html \
             --output-dir coverage \
@@ -206,9 +136,6 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
-
-      - name: Install devenv
-        run: nix profile install nixpkgs#devenv
 
       - name: Run cargo-audit
         uses: rustsec/audit-check@v1

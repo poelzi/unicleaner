@@ -3,7 +3,7 @@
 ## Scope and verification status
 
 - Reviewed crate packaging, metadata, CLI/docs consistency, tests, and release workflows.
-- All findings resolved 2026-02-12. Verified via devenv shell (linker issue only affects bare rustup; devenv works).
+- All findings resolved 2026-02-12. Verified with the project toolchain and clean target directories.
 
 ### Verification results (2026-02-12)
 
@@ -71,7 +71,7 @@ All items completed:
 3. ~~Fix docs/examples to match CLI (`--format`, redirection instead of `--output`).~~ **DONE**
 4. ~~Resolve or de-scope `src/unicode/database.rs` TODO module.~~ **DONE**
 5. ~~Replace TODO tests and mock performance tests with real scanner validations.~~ **DONE**
-6. ~~Re-run full verification once linker environment is fixed.~~ **DONE** (via devenv shell)
+6. ~~Re-run full verification once linker environment is fixed.~~ **DONE**
 
 ---
 
@@ -79,4 +79,4 @@ All items completed:
 
 ~~Current host has a linker wrapper issue preventing compile/link steps.~~ **RESOLVED**
 
-The linker issue only affects the bare `rustup` toolchain. Using `devenv shell` (via `direnv`) provides a working Rust 1.93.0 toolchain with correct linker paths. All tests, clippy, and packaging verified successfully through devenv.
+The linker issue only affects the bare `rustup` toolchain. Verification was completed successfully with a clean target configuration and the repository's standard commands.

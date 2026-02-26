@@ -1,0 +1,86 @@
+name: Reusable Unicode Security Check
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Release tag used by the action (or 'latest')."
+        required: false
+        type: string
+        default: "latest"
+      mode:
+        description: "Scan mode: diff or full."
+        required: false
+        type: string
+        default: "diff"
+      path:
+        description: "Scan path for mode=full."
+        required: false
+        type: string
+        default: "."
+      base-ref:
+        description: "Base branch used for mode=diff."
+        required: false
+        type: string
+        default: "main"
+      config:
+        description: "Optional path to unicleaner config file."
+        required: false
+        type: string
+        default: ""
+      severity:
+        description: "Optional severity filter."
+        required: false
+        type: string
+        default: ""
+      fail-on-violations:
+        description: "Fail workflow when violations are found."
+        required: false
+        type: boolean
+        default: true
+      artifact-name:
+        description: "Artifact name for uploaded JSON report."
+        required: false
+        type: string
+        default: "unicode-scan-results"
+    outputs:
+      violation_count:
+        description: "Number of violations found"
+        value: ${{ jobs.scan.outputs.violation_count }}
+      files_scanned:
+        description: "Number of files scanned"
+        value: ${{ jobs.scan.outputs.files_scanned }}
+
+jobs:
+  scan:
+    name: Unicode Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      violation_count: ${{ steps.scan.outputs.violation_count }}
+      files_scanned: ${{ steps.scan.outputs.files_scanned }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run unicleaner scan
+        id: scan
+        uses: poelzi/unicleaner@v1
+        with:
+          version: ${{ inputs.version }}
+          mode: ${{ inputs.mode }}
+          path: ${{ inputs.path }}
+          base-ref: ${{ inputs.base-ref }}
+          config: ${{ inputs.config }}
+          severity: ${{ inputs.severity }}
+          fail-on-violations: ${{ inputs.fail-on-violations }}
+          output-file: unicode-scan-results.json
+
+      - name: Upload JSON report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: unicode-scan-results.json

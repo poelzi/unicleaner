@@ -52,6 +52,43 @@ docker run --rm -v "$(pwd):/workspace" ghcr.io/poelzi/unicleaner:latest .
 
 See [Docker Usage Guide](docs/DOCKER.md) for detailed instructions and CI/CD integration examples.
 
+### As a GitHub Check
+
+Use the published action in your repository workflow:
+
+```yaml
+name: Unicode Security Check
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  unicode-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: poelzi/unicleaner@v1
+        with:
+          mode: diff
+          base-ref: main
+          fail-on-violations: true
+```
+
+You can also call the reusable workflow directly:
+
+```yaml
+jobs:
+  unicode-security:
+    uses: poelzi/unicleaner/.github/workflows/unicode-check.yml@v1
+    with:
+      mode: diff
+      base-ref: main
+      fail-on-violations: true
+```
+
 ### From Source
 
 ```bash
@@ -334,6 +371,7 @@ All changed files are safe to merge!
 - [Quickstart Guide](specs/001-unicode-malicious-detector/quickstart.md)
 - [Configuration Examples](examples/unicleaner.toml)
 - [CI/CD Integration](examples/)
+- [GitHub Action Guide](docs/GITHUB_ACTION.md)
 - [Docker Usage Guide](docs/DOCKER.md)
 - [Nix Build System](docs/NIX_BUILD_SYSTEM.md)
 
@@ -371,30 +409,24 @@ repos:
 Scan pull requests automatically:
 
 ```yaml
-# .github/workflows/security.yml
+# .github/workflows/unicode-security.yml
 name: Unicode Security Check
-on: [pull_request]
+on:
+  pull_request:
+    branches: [main]
 
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Run Unicleaner
-        run: |
-          docker run --rm -v "$PWD:/workspace" \
-            ghcr.io/poelzi/unicleaner:latest \
-            scan . --diff --format json > results.json
-      
-      - name: Check results
-        run: |
-          VIOLATIONS=$(jq '.violations | length' results.json)
-          if [ "$VIOLATIONS" -gt 0 ]; then
-            echo "❌ Found $VIOLATIONS Unicode violations!"
-            jq '.violations[]' results.json
-            exit 1
-          fi
+        with:
+          fetch-depth: 0
+      - uses: poelzi/unicleaner@v1
+        with:
+          mode: diff
+          base-ref: main
+          fail-on-violations: true
 ```
 
 ### 3. GitLab CI

@@ -28,7 +28,7 @@ unicode-security-scan:
   before_script:
     - rustc --version
     - cargo --version
-    - cargo install --git https://github.com/yourusername/unicleaner || echo "Using cached unicleaner"
+    - cargo install --git https://github.com/poelzi/unicleaner || echo "Using cached unicleaner"
 
   script:
     # Scan only changed files in merge requests
@@ -71,7 +71,7 @@ unicode-scan-custom-config:
   extends: .rust_cache
 
   before_script:
-    - cargo install --git https://github.com/yourusername/unicleaner
+    - cargo install --git https://github.com/poelzi/unicleaner
 
   script:
     # Create custom configuration
@@ -113,7 +113,7 @@ unicode-scan-blocking:
   extends: .rust_cache
 
   before_script:
-    - cargo install --git https://github.com/yourusername/unicleaner
+    - cargo install --git https://github.com/poelzi/unicleaner
 
   script:
     - |

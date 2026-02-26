@@ -1,9 +1,9 @@
 # Unicleaner
 
-[![CI](https://github.com/yourusername/unicleaner/workflows/CI/badge.svg)](https://github.com/yourusername/unicleaner/actions/workflows/ci.yml)
-[![PR Security Check](https://github.com/yourusername/unicleaner/workflows/PR%20Security%20Check/badge.svg)](https://github.com/yourusername/unicleaner/actions/workflows/pr-check.yml)
-[![Release](https://github.com/yourusername/unicleaner/workflows/Release/badge.svg)](https://github.com/yourusername/unicleaner/actions/workflows/release.yml)
-[![codecov](https://codecov.io/gh/yourusername/unicleaner/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/unicleaner)
+[![CI](https://github.com/poelzi/unicleaner/workflows/CI/badge.svg)](https://github.com/poelzi/unicleaner/actions/workflows/ci.yml)
+[![PR Security Check](https://github.com/poelzi/unicleaner/workflows/PR%20Security%20Check/badge.svg)](https://github.com/poelzi/unicleaner/actions/workflows/pr-check.yml)
+[![Release](https://github.com/poelzi/unicleaner/workflows/Release/badge.svg)](https://github.com/poelzi/unicleaner/actions/workflows/release.yml)
+[![codecov](https://codecov.io/gh/poelzi/unicleaner/branch/main/graph/badge.svg)](https://codecov.io/gh/poelzi/unicleaner)
 [![Crates.io](https://img.shields.io/crates/v/unicleaner.svg)](https://crates.io/crates/unicleaner)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 
@@ -37,17 +37,17 @@ cargo install unicleaner
 ### Using Nix
 
 ```bash
-nix run github:yourusername/unicleaner
+nix run github:poelzi/unicleaner
 ```
 
 ### Using Docker
 
 ```bash
 # Pull from GitHub Container Registry
-docker pull ghcr.io/yourusername/unicleaner:latest
+docker pull ghcr.io/poelzi/unicleaner:latest
 
 # Scan current directory
-docker run --rm -v "$(pwd):/workspace" ghcr.io/yourusername/unicleaner:latest .
+docker run --rm -v "$(pwd):/workspace" ghcr.io/poelzi/unicleaner:latest .
 ```
 
 See [Docker Usage Guide](docs/DOCKER.md) for detailed instructions and CI/CD integration examples.
@@ -55,7 +55,7 @@ See [Docker Usage Guide](docs/DOCKER.md) for detailed instructions and CI/CD int
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/unicleaner
+git clone https://github.com/poelzi/unicleaner
 cd unicleaner
 cargo build --release
 ./target/release/unicleaner --version
@@ -385,8 +385,8 @@ jobs:
       - name: Run Unicleaner
         run: |
           docker run --rm -v "$PWD:/workspace" \
-            ghcr.io/yourusername/unicleaner:latest \
-            scan . --diff --format json --output results.json
+            ghcr.io/poelzi/unicleaner:latest \
+            scan . --diff --format json > results.json
       
       - name: Check results
         run: |
@@ -404,9 +404,9 @@ jobs:
 # .gitlab-ci.yml
 unicode-security-scan:
   stage: test
-  image: ghcr.io/yourusername/unicleaner:latest
+  image: ghcr.io/poelzi/unicleaner:latest
   script:
-    - unicleaner scan . --format json --output gl-code-quality-report.json
+    - unicleaner scan . --format json > gl-code-quality-report.json
   artifacts:
     reports:
       codequality: gl-code-quality-report.json
@@ -486,7 +486,7 @@ Daily scans with notification:
 # daily-scan.sh
 
 REPORT_FILE="scan-$(date +%Y%m%d).json"
-unicleaner scan . --format json --output "$REPORT_FILE"
+unicleaner scan . --format json > "$REPORT_FILE"
 
 VIOLATIONS=$(jq '.violations | length' "$REPORT_FILE")
 
@@ -522,7 +522,7 @@ Generate compliance reports:
 # Scan and generate audit report
 unicleaner scan . \
   --format json \
-  --output compliance-report-$(date +%Y%m%d).json
+  > compliance-report-$(date +%Y%m%d).json
 
 # Convert to PDF for compliance documentation
 jq -r '.violations[] | 

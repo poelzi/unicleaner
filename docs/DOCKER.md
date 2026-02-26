@@ -7,18 +7,18 @@ Unicleaner provides a minimal Docker image built with a statically-linked musl b
 ### Pull from GitHub Container Registry
 
 ```bash
-docker pull ghcr.io/yourusername/unicleaner:latest
+docker pull ghcr.io/poelzi/unicleaner:latest
 ```
 
 ### Run with Current Directory
 
 ```bash
 # Scan current directory
-docker run --rm -v "$(pwd):/workspace" ghcr.io/yourusername/unicleaner:latest .
+docker run --rm -v "$(pwd):/workspace" ghcr.io/poelzi/unicleaner:latest .
 
 # With specific options
-docker run --rm -v "$(pwd):/workspace" ghcr.io/yourusername/unicleaner:latest \
-  scan . --format json --output /workspace/results.json
+docker run --rm -v "$(pwd):/workspace" ghcr.io/poelzi/unicleaner:latest \
+  scan . --format json > results.json
 ```
 
 ### Run with Custom Config
@@ -28,7 +28,7 @@ docker run --rm -v "$(pwd):/workspace" ghcr.io/yourusername/unicleaner:latest \
 docker run --rm \
   -v "$(pwd):/workspace" \
   -v "$(pwd)/unicleaner.toml:/config/unicleaner.toml:ro" \
-  ghcr.io/yourusername/unicleaner:latest \
+  ghcr.io/poelzi/unicleaner:latest \
   scan . --config /config/unicleaner.toml
 ```
 
@@ -121,8 +121,8 @@ jobs:
       - name: Scan for malicious Unicode
         run: |
           docker run --rm -v "$PWD:/workspace" \
-            ghcr.io/yourusername/unicleaner:latest \
-            scan . --format json --output /workspace/scan-results.json
+            ghcr.io/poelzi/unicleaner:latest \
+            scan . --format json > scan-results.json
 
       - name: Check results
         run: |
@@ -160,7 +160,7 @@ runs:
   steps:
     - name: Pull Unicleaner Docker image
       shell: bash
-      run: docker pull ghcr.io/yourusername/unicleaner:latest
+      run: docker pull ghcr.io/poelzi/unicleaner:latest
 
     - name: Run scan
       shell: bash
@@ -171,9 +171,9 @@ runs:
         fi
 
         docker run --rm -v "$PWD:/workspace" \
-          ghcr.io/yourusername/unicleaner:latest \
+          ghcr.io/poelzi/unicleaner:latest \
           scan ${{ inputs.path }} $CONFIG_ARG \
-          --format json --output /workspace/scan-results.json
+          --format json > scan-results.json
 
     - name: Check violations
       shell: bash
@@ -211,10 +211,10 @@ unicode-scan:
   services:
     - docker:dind
   script:
-    - docker pull ghcr.io/yourusername/unicleaner:latest
+    - docker pull ghcr.io/poelzi/unicleaner:latest
     - docker run --rm -v "$PWD:/workspace"
-        ghcr.io/yourusername/unicleaner:latest
-        scan . --format json --output results.json
+        ghcr.io/poelzi/unicleaner:latest
+        scan . --format json > results.json
     - |
       VIOLATIONS=$(jq '.violations | length' results.json)
       if [ "$VIOLATIONS" -gt 0 ]; then
@@ -241,13 +241,13 @@ jobs:
       - setup_remote_docker
       - run:
           name: Pull Unicleaner
-          command: docker pull ghcr.io/yourusername/unicleaner:latest
+          command: docker pull ghcr.io/poelzi/unicleaner:latest
       - run:
           name: Scan for malicious Unicode
           command: |
             docker run --rm -v "$PWD:/workspace" \
-              ghcr.io/yourusername/unicleaner:latest \
-              scan . --format json --output results.json
+              ghcr.io/poelzi/unicleaner:latest \
+              scan . --format json > results.json
       - store_artifacts:
           path: results.json
 
@@ -268,8 +268,8 @@ pipeline {
         stage('Unicode Security Scan') {
             steps {
                 script {
-                    docker.image('ghcr.io/yourusername/unicleaner:latest').inside('-v ${WORKSPACE}:/workspace') {
-                        sh 'unicleaner scan . --format json --output /workspace/results.json'
+                    docker.image('ghcr.io/poelzi/unicleaner:latest').inside('-v ${WORKSPACE}:/workspace') {
+                        sh 'unicleaner scan . --format json > /workspace/results.json'
                     }
 
                     def results = readJSON file: 'results.json'
@@ -296,12 +296,12 @@ pipeline {
 ```bash
 # Stage 1: Quick scan of critical files
 docker run --rm -v "$(pwd):/workspace" \
-  ghcr.io/yourusername/unicleaner:latest \
+  ghcr.io/poelzi/unicleaner:latest \
   scan src/ --severity error
 
 # Stage 2: Full scan with warnings
 docker run --rm -v "$(pwd):/workspace" \
-  ghcr.io/yourusername/unicleaner:latest \
+  ghcr.io/poelzi/unicleaner:latest \
   scan . --severity warning --format json
 ```
 
@@ -311,7 +311,7 @@ docker run --rm -v "$(pwd):/workspace" \
 # In CI, scan only changed files
 docker run --rm -v "$(pwd):/workspace" \
   -v "$(pwd)/.git:/workspace/.git:ro" \
-  ghcr.io/yourusername/unicleaner:latest \
+  ghcr.io/poelzi/unicleaner:latest \
   scan . --diff
 ```
 
@@ -338,7 +338,7 @@ ENTRYPOINT ["/bin/unicleaner"]
 # Run as current user
 docker run --rm --user $(id -u):$(id -g) \
   -v "$(pwd):/workspace" \
-  ghcr.io/yourusername/unicleaner:latest .
+  ghcr.io/poelzi/unicleaner:latest .
 ```
 
 ### Mount Issues
@@ -346,12 +346,12 @@ docker run --rm --user $(id -u):$(id -g) \
 ```bash
 # Use absolute paths
 docker run --rm -v "/absolute/path/to/code:/workspace" \
-  ghcr.io/yourusername/unicleaner:latest .
+  ghcr.io/poelzi/unicleaner:latest .
 
 # Check mount worked
 docker run --rm -v "$(pwd):/workspace" \
   --entrypoint ls \
-  ghcr.io/yourusername/unicleaner:latest \
+  ghcr.io/poelzi/unicleaner:latest \
   -la /workspace
 ```
 
@@ -361,10 +361,10 @@ If you get "not found" or "no such file" errors:
 
 ```bash
 # Check architecture
-docker run --rm ghcr.io/yourusername/unicleaner:latest --version
+docker run --rm ghcr.io/poelzi/unicleaner:latest --version
 
 # Verify static linking
-docker run --rm --entrypoint sh ghcr.io/yourusername/unicleaner:latest \
+docker run --rm --entrypoint sh ghcr.io/poelzi/unicleaner:latest \
   -c "ldd /bin/unicleaner || echo 'Static binary confirmed'"
 ```
 

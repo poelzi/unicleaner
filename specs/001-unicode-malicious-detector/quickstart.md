@@ -10,10 +10,10 @@ cargo install unicleaner
 ### Using Nix
 ```bash
 # Run directly
-nix run github:yourusername/unicleaner
+nix run github:poelzi/unicleaner
 
 # Install to profile
-nix profile install github:yourusername/unicleaner
+nix profile install github:poelzi/unicleaner
 
 # In development shell
 nix develop
@@ -21,7 +21,7 @@ nix develop
 
 ### From Source
 ```bash
-git clone https://github.com/yourusername/unicleaner
+git clone https://github.com/poelzi/unicleaner
 cd unicleaner
 cargo build --release
 ./target/release/unicleaner --version
@@ -315,4 +315,4 @@ fi
 
 - Run `unicleaner --help` for command documentation
 - Check exit code meanings with `echo $?` after running
-- File issues at: https://github.com/yourusername/unicleaner/issues
+- File issues at: https://github.com/poelzi/unicleaner/issues

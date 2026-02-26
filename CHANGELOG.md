@@ -81,4 +81,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Protection against Trojan Source attacks
 - Safe encoding handling for all Unicode formats
 
-[1.0.0]: https://github.com/yourusername/unicleaner/releases/tag/v1.0.0
+[1.0.0]: https://github.com/poelzi/unicleaner/releases/tag/v1.0.0

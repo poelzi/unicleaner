@@ -27,7 +27,7 @@ jobs:
           toolchain: stable
 
       - name: Install Unicleaner
-        run: cargo install --git https://github.com/yourusername/unicleaner
+        run: cargo install --git https://github.com/poelzi/unicleaner
 
       # Option 1: Scan only changed files (recommended for PRs)
       - name: Scan changed files
@@ -70,7 +70,7 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           source $HOME/.cargo/env
-          cargo install --git https://github.com/yourusername/unicleaner
+          cargo install --git https://github.com/poelzi/unicleaner
 
       - name: Create custom config
         run: |

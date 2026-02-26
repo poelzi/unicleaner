@@ -34,13 +34,13 @@
           src = ./.;
           cargoLock.lockFile = ./Cargo.lock;
 
-          nativeBuildInputs = with pkgs; [ pkg-config ];
+          nativeBuildInputs = with pkgs; [ ];
 
-          buildInputs = with pkgs; [ openssl ];
+          buildInputs = with pkgs; [ ];
 
           meta = with pkgs.lib; {
             description = "Detect malicious Unicode characters in source code";
-            homepage = "https://github.com/yourusername/unicleaner";
+            homepage = "https://github.com/poelzi/unicleaner";
             license = with licenses; [
               mit
             ];
@@ -64,7 +64,8 @@
           inherit system overlays;
         };
 
-        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+        # Pin toolchain to avoid unexpected breakages.
+        rustToolchain = pkgs.rust-bin.stable."1.93.0".default.override {
           extensions = [
             "rust-src"
             "clippy"
@@ -100,7 +101,7 @@
 
           meta = with pkgs.lib; {
             description = "Detect malicious Unicode characters in source code (static musl build)";
-            homepage = "https://github.com/yourusername/unicleaner";
+            homepage = "https://github.com/poelzi/unicleaner";
             license = with licenses; [
               mit
             ];
@@ -136,8 +137,8 @@
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
 
-            nativeBuildInputs = with pkgs; [ pkg-config ];
-            buildInputs = with pkgs; [ openssl ];
+            nativeBuildInputs = with pkgs; [ ];
+            buildInputs = with pkgs; [ ];
 
             buildPhase = ''
               runHook preBuild
@@ -170,7 +171,7 @@
             # Rust linting
             clippy = {
               enable = true;
-              entry = "${rustToolchain}/bin/cargo-clippy clippy --all-targets --all-features -- -D warnings";
+              entry = "${rustToolchain}/bin/cargo-clippy clippy --profile test --all-targets --all-features -- -D warnings";
               files = "\\.rs$";
               pass_filenames = false;
             };
@@ -394,7 +395,7 @@
           # Clippy check
           clippy = mkCheck {
             name = "clippy";
-            buildPhase = "cargo clippy --all-targets --all-features -- -D warnings";
+            buildPhase = "cargo clippy --profile test --all-targets --all-features -- -D warnings";
             resultMessage = "Clippy checks passed";
           };
 
@@ -409,8 +410,6 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             rustToolchain
-            pkg-config
-            openssl
             devenv
 
             # Development tools

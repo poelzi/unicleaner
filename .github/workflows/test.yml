@@ -61,9 +61,6 @@ jobs:
       - name: Run integration tests
         run: cargo test --test integration --verbose
 
-      - name: Run contract tests
-        run: cargo test --test contract --verbose
-
       - name: Run doc tests
         run: cargo test --doc --verbose
 

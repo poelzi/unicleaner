@@ -13,11 +13,14 @@
   # https://devenv.sh/basics/
   env = {
     CARGO_TERM_COLOR = "always";
+    CARGO_TARGET_DIR = "target/devenv";
+    RUST_MIN_STACK = "16777216";
   };
 
   # https://devenv.sh/packages/
   packages = with pkgs; [
     git
+    just
 
     # Rust development tools
     rust-analyzer
@@ -36,6 +39,7 @@
   languages.rust = {
     enable = true;
     channel = "stable";
+    version = "1.93.0";
     components = [
       "rustc"
       "cargo"

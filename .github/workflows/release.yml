@@ -49,7 +49,7 @@ jobs:
 
             #### Using Nix
             ```bash
-            nix run github:yourusername/unicleaner/${{ github.ref_name }}
+            nix run github:poelzi/unicleaner/${{ github.ref_name }}
             ```
 
             ### What's Changed

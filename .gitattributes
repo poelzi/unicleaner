@@ -1,0 +1,3 @@
+# Force LF line endings for all text files to ensure consistent formatting
+# across platforms (required by rustfmt.toml newline_style = "Unix")
+* text=auto eol=lf

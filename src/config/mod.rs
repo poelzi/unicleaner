@@ -71,7 +71,9 @@ impl Configuration {
     pub fn get_allowed_ranges(&self, file_path: &Path) -> Option<Vec<UnicodeRange>> {
         // Check if any file-specific rule matches
         if let Some(rule) = rules::find_matching_rule(&self.file_rules, file_path) {
-            return Some(rule.allowed_ranges.clone());
+            if !rule.allowed_ranges.is_empty() {
+                return Some(rule.allowed_ranges.clone());
+            }
         }
 
         // Check for language preset based on file extension
@@ -89,9 +91,25 @@ impl Configuration {
 
     /// Check if a code point is allowed in a specific file
     pub fn is_code_point_allowed(&self, file_path: &Path, code_point: u32) -> bool {
-        // Check file-specific rules first (highest priority)
+        // Allow-by-default: only explicit denies matter.
+        if !self.deny_by_default {
+            if let Some(rule) = rules::find_matching_rule(&self.file_rules, file_path) {
+                if rule.denied_code_points.contains(&code_point) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Deny-by-default: apply explicit denies, then allowlist.
         if let Some(rule) = rules::find_matching_rule(&self.file_rules, file_path) {
-            return rule.is_code_point_allowed(code_point);
+            if rule.denied_code_points.contains(&code_point) {
+                return false;
+            }
+
+            if !rule.allowed_ranges.is_empty() {
+                return rule.allowed_ranges.iter().any(|r| r.contains(code_point));
+            }
         }
 
         // Check language presets
@@ -99,14 +117,8 @@ impl Configuration {
             return ranges.iter().any(|range| range.contains(code_point));
         }
 
-        // Fall back to global setting
-        if self.deny_by_default {
-            // Deny by default - only ASCII is safe
-            code_point <= 0x007F
-        } else {
-            // Allow by default - only deny explicitly malicious
-            true
-        }
+        // Fall back to global default allowlist (safe ASCII).
+        matches!(code_point, 0x0009..=0x000D | 0x0020..=0x007E)
     }
 }
 
@@ -182,7 +194,7 @@ mod tests {
 
         // ASCII should be allowed
         assert!(config.is_code_point_allowed(&path, 0x0041)); // 'A'
-        assert!(config.is_code_point_allowed(&path, 0x007F)); // DEL
+        assert!(!config.is_code_point_allowed(&path, 0x007F)); // DEL
 
         // Non-ASCII should be denied
         assert!(!config.is_code_point_allowed(&path, 0x0080));

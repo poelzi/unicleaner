@@ -6,9 +6,11 @@
 /// - U+202A to U+202E: LRE, RLE, PDF, LRO, RLO
 /// - U+2066 to U+2069: LRI, RLI, FSI, PDI
 /// - U+200E to U+200F: LRM, RLM
+/// - U+061C: ALM (Arabic Letter Mark)
 pub fn is_bidi_control(c: char) -> bool {
     let code = c as u32;
     matches!(code,
+        0x061C |          // ALM
         0x200E..=0x200F |  // LRM, RLM
         0x202A..=0x202E |  // LRE, RLE, PDF, LRO, RLO
         0x2066..=0x2069    // LRI, RLI, FSI, PDI
@@ -130,6 +132,7 @@ mod tests {
         // Test bidi marks
         assert!(is_bidi_control('\u{200E}')); // LRM
         assert!(is_bidi_control('\u{200F}')); // RLM
+        assert!(is_bidi_control('\u{061C}')); // ALM
 
         // Test non-bidi characters
         assert!(!is_bidi_control('a'));

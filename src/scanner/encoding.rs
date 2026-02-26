@@ -1,7 +1,7 @@
 //! File encoding detection and handling
 
 use crate::Result;
-use encoding_rs::{UTF_16BE, UTF_16LE};
+use encoding_rs::{Encoding, UTF_16BE, UTF_16LE};
 use serde::{Deserialize, Serialize};
 
 /// Detected encoding information
@@ -28,31 +28,27 @@ impl DetectedEncoding {
 
 /// Detect BOM (Byte Order Mark) at the start of file
 fn detect_bom(bytes: &[u8]) -> Option<DetectedEncoding> {
+    // UTF-32 BOMs must be checked first: UTF-32 LE BOM (FF FE 00 00) starts
+    // with the UTF-16 LE BOM (FF FE), so encoding_rs would misidentify it.
+    // encoding_rs follows the Encoding Standard which does not define UTF-32.
     if bytes.len() >= 4 {
-        // UTF-32 LE BOM: FF FE 00 00
-        if bytes[0] == 0xFF && bytes[1] == 0xFE && bytes[2] == 0x00 && bytes[3] == 0x00 {
+        if bytes[..4] == [0xFF, 0xFE, 0x00, 0x00] {
             return Some(DetectedEncoding::Utf32Le);
         }
-        // UTF-32 BE BOM: 00 00 FE FF
-        if bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0xFE && bytes[3] == 0xFF {
+        if bytes[..4] == [0x00, 0x00, 0xFE, 0xFF] {
             return Some(DetectedEncoding::Utf32Be);
         }
     }
 
-    if bytes.len() >= 3 {
-        // UTF-8 BOM: EF BB BF
-        if bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF {
+    // UTF-8 and UTF-16 BOMs via encoding_rs
+    if let Some((encoding, _bom_len)) = Encoding::for_bom(bytes) {
+        if encoding == encoding_rs::UTF_8 {
             return Some(DetectedEncoding::Utf8);
         }
-    }
-
-    if bytes.len() >= 2 {
-        // UTF-16 LE BOM: FF FE
-        if bytes[0] == 0xFF && bytes[1] == 0xFE {
+        if encoding == encoding_rs::UTF_16LE {
             return Some(DetectedEncoding::Utf16Le);
         }
-        // UTF-16 BE BOM: FE FF
-        if bytes[0] == 0xFE && bytes[1] == 0xFF {
+        if encoding == encoding_rs::UTF_16BE {
             return Some(DetectedEncoding::Utf16Be);
         }
     }
@@ -130,8 +126,32 @@ fn detect_heuristic(bytes: &[u8]) -> Option<DetectedEncoding> {
     None
 }
 
+/// Best-effort hint for UTF-16/UTF-32, without decoding.
+///
+/// This is intended to be used to avoid misclassifying UTF-16/UTF-32 text as
+/// binary solely due to embedded NUL bytes.
+pub fn detect_utf16_or_utf32(bytes: &[u8]) -> Option<DetectedEncoding> {
+    match detect_bom(bytes) {
+        Some(
+            enc @ (DetectedEncoding::Utf16Le
+            | DetectedEncoding::Utf16Be
+            | DetectedEncoding::Utf32Le
+            | DetectedEncoding::Utf32Be),
+        ) => Some(enc),
+        _ => match detect_heuristic(bytes) {
+            Some(
+                enc @ (DetectedEncoding::Utf16Le
+                | DetectedEncoding::Utf16Be
+                | DetectedEncoding::Utf32Le
+                | DetectedEncoding::Utf32Be),
+            ) => Some(enc),
+            _ => None,
+        },
+    }
+}
+
 /// Decode UTF-16 LE bytes to String
-fn decode_utf16_le(bytes: &[u8]) -> Result<String> {
+pub fn decode_utf16_le(bytes: &[u8]) -> Result<String> {
     let (cow, _encoding, had_errors) = UTF_16LE.decode(bytes);
     if had_errors {
         return Err(crate::Error::Encoding(
@@ -142,7 +162,7 @@ fn decode_utf16_le(bytes: &[u8]) -> Result<String> {
 }
 
 /// Decode UTF-16 BE bytes to String
-fn decode_utf16_be(bytes: &[u8]) -> Result<String> {
+pub fn decode_utf16_be(bytes: &[u8]) -> Result<String> {
     let (cow, _encoding, had_errors) = UTF_16BE.decode(bytes);
     if had_errors {
         return Err(crate::Error::Encoding(
@@ -153,7 +173,7 @@ fn decode_utf16_be(bytes: &[u8]) -> Result<String> {
 }
 
 /// Decode UTF-32 LE bytes to String
-fn decode_utf32_le(bytes: &[u8]) -> Result<String> {
+pub fn decode_utf32_le(bytes: &[u8]) -> Result<String> {
     if bytes.len() % 4 != 0 {
         return Err(crate::Error::Encoding(
             "Invalid UTF-32 LE length (not multiple of 4)".to_string(),
@@ -173,7 +193,7 @@ fn decode_utf32_le(bytes: &[u8]) -> Result<String> {
 }
 
 /// Decode UTF-32 BE bytes to String
-fn decode_utf32_be(bytes: &[u8]) -> Result<String> {
+pub fn decode_utf32_be(bytes: &[u8]) -> Result<String> {
     if bytes.len() % 4 != 0 {
         return Err(crate::Error::Encoding(
             "Invalid UTF-32 BE length (not multiple of 4)".to_string(),
@@ -229,7 +249,6 @@ pub fn detect_and_decode(bytes: &[u8]) -> Result<String> {
         return Ok(s.to_string());
     }
 
-    // Fall back to chardetng for other encodings
     Err(crate::Error::Encoding(
         "Could not detect encoding (not UTF-8, UTF-16, or UTF-32)".to_string(),
     ))
@@ -295,24 +314,46 @@ pub fn detect_encoding(path: &std::path::Path) -> Result<String> {
 /// Check if file appears to be binary (null bytes in first 8KB)
 pub fn is_binary(bytes: &[u8]) -> bool {
     let check_len = bytes.len().min(8192);
+    if check_len == 0 {
+        return false;
+    }
 
-    // UTF-16 and UTF-32 text files have many nulls, so we need a smarter check
-    // Count consecutive nulls - binary files tend to have many consecutive nulls
-    let mut max_consecutive_nulls = 0;
-    let mut current_nulls = 0;
+    let sample = &bytes[..check_len];
 
-    for &byte in &bytes[..check_len] {
+    // Heuristic 1: Consecutive nulls (binary files tend to have many)
+    // UTF-16/32 text will have nulls but not many consecutive ones
+    let mut max_consecutive_nulls: usize = 0;
+    let mut current_nulls: usize = 0;
+
+    // Heuristic 2: Control byte ratio
+    // Count bytes in 0x00-0x08, 0x0E-0x1F (excluding TAB 0x09, LF 0x0A, CR 0x0D)
+    let mut control_count: usize = 0;
+
+    for &byte in sample {
         if byte == 0 {
             current_nulls += 1;
             max_consecutive_nulls = max_consecutive_nulls.max(current_nulls);
         } else {
             current_nulls = 0;
         }
+
+        if matches!(byte, 0x00..=0x08 | 0x0E..=0x1F) {
+            control_count += 1;
+        }
     }
 
-    // If we have more than 10 consecutive nulls, it's likely binary
-    // UTF-16/32 text will have nulls but not many consecutive ones
-    max_consecutive_nulls > 10
+    // Binary if many consecutive nulls
+    if max_consecutive_nulls > 10 {
+        return true;
+    }
+
+    // Binary if control byte ratio > 30%
+    let control_ratio = (control_count as f64) / (check_len as f64);
+    if control_ratio > 0.30 {
+        return true;
+    }
+
+    false
 }
 
 #[cfg(test)]
@@ -343,6 +384,35 @@ mod tests {
     fn test_is_binary_with_text() {
         let text = b"Hello World";
         assert!(!is_binary(text));
+    }
+
+    // T064: Binary detection via control byte ratio
+    #[test]
+    fn test_binary_detection_control_byte_ratio() {
+        // 40% control bytes, zero consecutive nulls
+        let mut data = Vec::new();
+        for i in 0..100u8 {
+            if i < 40 {
+                data.push(0x01); // control byte (SOH)
+            } else {
+                data.push(0x41); // 'A'
+            }
+        }
+        assert!(is_binary(&data), "High control byte ratio should be binary");
+    }
+
+    // T065: Normal text with occasional controls is NOT binary
+    #[test]
+    fn test_text_file_not_falsely_binary() {
+        let mut data = Vec::new();
+        // Normal text with tabs and newlines
+        for _ in 0..100 {
+            data.extend_from_slice(b"Hello\tWorld\n");
+        }
+        assert!(
+            !is_binary(&data),
+            "Normal text with tabs/newlines should not be binary"
+        );
     }
 
     // T121: UTF-16 LE BOM detection

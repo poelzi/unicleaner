@@ -6,6 +6,7 @@
 
 use libfuzzer_sys::fuzz_target;
 use std::path::PathBuf;
+use unicleaner::config::Configuration;
 
 fuzz_target!(|data: &[u8]| {
     if data.is_empty() {
@@ -24,20 +25,39 @@ fuzz_target!(|data: &[u8]| {
             .collect();
 
         if !paths.is_empty() {
+            let config = Configuration::default();
+
             // Test with None (default thread count)
-            let _ = unicleaner::scanner::parallel::scan_files_parallel(paths.clone(), None);
+            let _ = unicleaner::scanner::parallel::scan_files_parallel(
+                paths.clone(),
+                None,
+                &config,
+                None,
+            );
 
             // Test with specific thread count from fuzz input
             if thread_count > 0 {
                 let _ = unicleaner::scanner::parallel::scan_files_parallel(
                     paths.clone(),
                     Some(thread_count),
+                    &config,
+                    None,
                 );
             }
 
             // Test edge cases
-            let _ = unicleaner::scanner::parallel::scan_files_parallel(paths.clone(), Some(1));
-            let _ = unicleaner::scanner::parallel::scan_files_parallel(paths.clone(), Some(100));
+            let _ = unicleaner::scanner::parallel::scan_files_parallel(
+                paths.clone(),
+                Some(1),
+                &config,
+                None,
+            );
+            let _ = unicleaner::scanner::parallel::scan_files_parallel(
+                paths.clone(),
+                Some(100),
+                &config,
+                None,
+            );
         }
     }
 });

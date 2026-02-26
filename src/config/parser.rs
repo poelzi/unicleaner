@@ -113,6 +113,8 @@ pub fn parse_config(toml: &str, path: &Path) -> Result<Configuration, Error> {
     // Sort rules by priority
     crate::config::rules::sort_rules_by_priority(&mut config.file_rules);
 
+    crate::config::validation::validate_config(&config)?;
+
     Ok(config)
 }
 
@@ -153,15 +155,12 @@ deny_by_default = true
     #[test]
     fn test_parse_config_with_language_preset() {
         let toml = r#"
-[languages.rust]
-preset = "rust"
+ [languages.rs]
+ preset = "rust"
         "#;
 
         let config = parse_config(toml, Path::new("test.toml")).unwrap();
-        assert_eq!(
-            config.language_presets.get("rust"),
-            Some(&"rust".to_string())
-        );
+        assert_eq!(config.language_presets.get("rs"), Some(&"rust".to_string()));
     }
 
     #[test]

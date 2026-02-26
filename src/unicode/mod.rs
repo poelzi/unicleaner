@@ -2,6 +2,5 @@
 
 pub mod blocks;
 pub mod categories;
-pub mod database;
 pub mod malicious;
 pub mod ranges;

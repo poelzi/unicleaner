@@ -1,48 +1,104 @@
 //! Parallel file scanning with rayon
 
+use crate::config::Configuration;
 use crate::report::{ScanError, Violation};
-use crate::scanner::file_scanner::scan_file;
+use crate::scanner::encoding::DetectedEncoding;
+use crate::scanner::file_scanner::scan_file_with_config;
 use rayon::prelude::*;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 
 /// Scan multiple files in parallel
 pub fn scan_files_parallel(
     files: Vec<PathBuf>,
     num_threads: Option<usize>,
+    config: &Configuration,
+    encoding_override: Option<DetectedEncoding>,
 ) -> (Vec<Violation>, Vec<ScanError>) {
-    // Configure rayon thread pool if specified
-    if let Some(threads) = num_threads {
-        rayon::ThreadPoolBuilder::new()
+    let scan_closure = || {
+        files
+            .par_iter()
+            .fold(
+                || (Vec::new(), Vec::new()),
+                |mut acc, file| {
+                    match scan_file_with_config(file, config, encoding_override) {
+                        Ok(file_violations) => {
+                            acc.0.extend(file_violations);
+                        }
+                        Err(e) => {
+                            let error_type = classify_error(&e);
+                            acc.1
+                                .push(ScanError::new(file.clone(), error_type, e.to_string()));
+                        }
+                    }
+                    acc
+                },
+            )
+            .reduce(
+                || (Vec::new(), Vec::new()),
+                |mut a, b| {
+                    a.0.extend(b.0);
+                    a.1.extend(b.1);
+                    a
+                },
+            )
+    };
+
+    // Use a local thread pool if specified, otherwise use the global pool
+    let mut result = if let Some(threads) = num_threads {
+        let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(threads)
             .build()
             .expect("Failed to build thread pool");
-    }
+        pool.install(scan_closure)
+    } else {
+        scan_closure()
+    };
 
-    let violations = Arc::new(Mutex::new(Vec::new()));
-    let errors = Arc::new(Mutex::new(Vec::new()));
-
-    files.par_iter().for_each(|file| match scan_file(file) {
-        Ok(file_violations) => {
-            if !file_violations.is_empty() {
-                let mut v = violations.lock().unwrap();
-                v.extend(file_violations);
-            }
-        }
-        Err(e) => {
-            let mut errs = errors.lock().unwrap();
-            errs.push(ScanError::new(
-                file.clone(),
-                crate::report::violation::ErrorType::IoError,
-                e.to_string(),
-            ));
-        }
+    result.0.sort_by(|a, b| {
+        a.file_path
+            .cmp(&b.file_path)
+            .then(a.line.cmp(&b.line))
+            .then(a.column.cmp(&b.column))
+            .then(a.code_point.cmp(&b.code_point))
     });
 
-    let final_violations = Arc::try_unwrap(violations).unwrap().into_inner().unwrap();
-    let final_errors = Arc::try_unwrap(errors).unwrap().into_inner().unwrap();
+    result.1.sort_by(|a, b| {
+        a.file_path
+            .cmp(&b.file_path)
+            .then(error_type_rank(a.error_type).cmp(&error_type_rank(b.error_type)))
+            .then(a.message.cmp(&b.message))
+    });
 
-    (final_violations, final_errors)
+    result
+}
+
+/// Classify an error into the appropriate ErrorType
+fn classify_error(error: &crate::Error) -> crate::report::violation::ErrorType {
+    use crate::report::violation::ErrorType;
+
+    match error {
+        crate::Error::Encoding(_) => ErrorType::EncodingError,
+        crate::Error::Io(io_err) => {
+            if io_err.kind() == std::io::ErrorKind::PermissionDenied {
+                ErrorType::PermissionDenied
+            } else {
+                ErrorType::IoError
+            }
+        }
+        crate::Error::Config(_) => ErrorType::ParseError,
+        _ => ErrorType::IoError,
+    }
+}
+
+fn error_type_rank(error_type: crate::report::violation::ErrorType) -> u8 {
+    use crate::report::violation::ErrorType;
+
+    match error_type {
+        ErrorType::PermissionDenied => 0,
+        ErrorType::IoError => 1,
+        ErrorType::EncodingError => 2,
+        ErrorType::ParseError => 3,
+    }
 }
 
 #[cfg(test)]
@@ -61,7 +117,8 @@ mod tests {
         fs::write(&file2, "also clean").unwrap();
 
         let files = vec![file1, file2];
-        let (violations, errors) = scan_files_parallel(files, Some(2));
+        let config = Configuration::default();
+        let (violations, errors) = scan_files_parallel(files, Some(2), &config, None);
 
         assert_eq!(violations.len(), 0);
         assert_eq!(errors.len(), 0);
@@ -79,7 +136,8 @@ mod tests {
         fs::write(&file2, format!("bad{}", zwsp)).unwrap();
 
         let files = vec![file1, file2];
-        let (violations, errors) = scan_files_parallel(files, Some(2));
+        let config = Configuration::default();
+        let (violations, errors) = scan_files_parallel(files, Some(2), &config, None);
 
         assert_eq!(violations.len(), 1);
         assert_eq!(errors.len(), 0);
@@ -88,7 +146,8 @@ mod tests {
     #[test]
     fn test_scan_files_parallel_with_errors() {
         let files = vec![PathBuf::from("/nonexistent/file.txt")];
-        let (violations, errors) = scan_files_parallel(files, Some(1));
+        let config = Configuration::default();
+        let (violations, errors) = scan_files_parallel(files, Some(1), &config, None);
 
         assert_eq!(violations.len(), 0);
         assert_eq!(errors.len(), 1);
@@ -97,7 +156,8 @@ mod tests {
     #[test]
     fn test_scan_files_parallel_empty() {
         let files = vec![];
-        let (violations, errors) = scan_files_parallel(files, Some(1));
+        let config = Configuration::default();
+        let (violations, errors) = scan_files_parallel(files, Some(1), &config, None);
 
         assert_eq!(violations.len(), 0);
         assert_eq!(errors.len(), 0);

@@ -14,12 +14,6 @@ mod regression_tests {
     //     // Test for specific issue
     // }
 
-    #[test]
-    fn regression_test_placeholder() {
-        // This is a placeholder - add actual regression tests as issues are found
-        assert!(true, "Regression test framework is in place");
-    }
-
     // Example regression test structure
     #[test]
     fn test_scanner_handles_consecutive_bidi_chars() {

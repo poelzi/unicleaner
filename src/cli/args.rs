@@ -29,12 +29,18 @@ pub struct Args {
     #[arg(short = 'f', long, value_enum, default_value = "human", global = true)]
     pub format: OutputFormat,
 
-    /// Control color output (auto, always, never)
-    #[arg(long, value_enum, default_value = "auto", global = true)]
-    pub color: ColorOption,
+    /// Control color output (auto, yes, no)
+    #[arg(
+        long = "colors",
+        value_enum,
+        default_value = "auto",
+        global = true,
+        alias = "color"
+    )]
+    pub colors: ColorsOption,
 
-    /// Disable color output (deprecated: use --color=never)
-    #[arg(long, global = true, conflicts_with = "color")]
+    /// Disable color output (deprecated: use --colors=no)
+    #[arg(long, global = true, conflicts_with = "colors")]
     pub no_color: bool,
 
     /// Show only summary (suppress individual violations)
@@ -99,6 +105,8 @@ pub enum OutputFormat {
     Human,
     /// JSON format
     Json,
+    /// Markdown format
+    Markdown,
     /// GitHub Actions format
     Github,
     /// GitLab CI format
@@ -106,22 +114,24 @@ pub enum OutputFormat {
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
-pub enum ColorOption {
-    /// Auto-detect based on TTY and NO_COLOR
+pub enum ColorsOption {
+    /// Auto-detect based on TTY, NO_COLOR, and terminal capability
     Auto,
-    /// Always use colors
-    Always,
-    /// Never use colors
-    Never,
+    /// Enable colors
+    #[value(alias = "always")]
+    Yes,
+    /// Disable colors
+    #[value(alias = "never")]
+    No,
 }
 
-impl ColorOption {
+impl ColorsOption {
     /// Convert to ColorMode for use in output module
     pub fn to_color_mode(self) -> ColorMode {
         match self {
             Self::Auto => ColorMode::Auto,
-            Self::Always => ColorMode::Always,
-            Self::Never => ColorMode::Never,
+            Self::Yes => ColorMode::Always,
+            Self::No => ColorMode::Never,
         }
     }
 }
@@ -215,7 +225,7 @@ impl Args {
         if self.no_color {
             ColorMode::Never
         } else {
-            self.color.to_color_mode()
+            self.colors.to_color_mode()
         }
     }
 }
@@ -359,29 +369,29 @@ mod tests {
 
     #[test]
     fn test_color_option_auto() {
-        let args = Args::try_parse_from(vec!["unicleaner", "--color", "auto"]).unwrap();
-        assert!(matches!(args.color, ColorOption::Auto));
+        let args = Args::try_parse_from(vec!["unicleaner", "--colors", "auto"]).unwrap();
+        assert!(matches!(args.colors, ColorsOption::Auto));
         assert_eq!(args.get_color_mode(), ColorMode::Auto);
     }
 
     #[test]
     fn test_color_option_always() {
-        let args = Args::try_parse_from(vec!["unicleaner", "--color", "always"]).unwrap();
-        assert!(matches!(args.color, ColorOption::Always));
+        let args = Args::try_parse_from(vec!["unicleaner", "--colors", "yes"]).unwrap();
+        assert!(matches!(args.colors, ColorsOption::Yes));
         assert_eq!(args.get_color_mode(), ColorMode::Always);
     }
 
     #[test]
     fn test_color_option_never() {
-        let args = Args::try_parse_from(vec!["unicleaner", "--color", "never"]).unwrap();
-        assert!(matches!(args.color, ColorOption::Never));
+        let args = Args::try_parse_from(vec!["unicleaner", "--colors", "no"]).unwrap();
+        assert!(matches!(args.colors, ColorsOption::No));
         assert_eq!(args.get_color_mode(), ColorMode::Never);
     }
 
     #[test]
     fn test_color_option_default() {
         let args = Args::try_parse_from(vec!["unicleaner"]).unwrap();
-        assert!(matches!(args.color, ColorOption::Auto));
+        assert!(matches!(args.colors, ColorsOption::Auto));
         assert_eq!(args.get_color_mode(), ColorMode::Auto);
     }
 
@@ -394,9 +404,9 @@ mod tests {
 
     #[test]
     fn test_color_option_conversion() {
-        assert_eq!(ColorOption::Auto.to_color_mode(), ColorMode::Auto);
-        assert_eq!(ColorOption::Always.to_color_mode(), ColorMode::Always);
-        assert_eq!(ColorOption::Never.to_color_mode(), ColorMode::Never);
+        assert_eq!(ColorsOption::Auto.to_color_mode(), ColorMode::Auto);
+        assert_eq!(ColorsOption::Yes.to_color_mode(), ColorMode::Always);
+        assert_eq!(ColorsOption::No.to_color_mode(), ColorMode::Never);
     }
 
     #[test]

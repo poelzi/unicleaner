@@ -5,11 +5,11 @@
 
 use libfuzzer_sys::fuzz_target;
 use std::path::PathBuf;
-use unicleaner::scanner::walker::{walk_paths, WalkConfig};
+use unicleaner::scanner::walker::{WalkConfig, walk_paths};
 
 // Suppress LeakSanitizer for this target - the ignore crate's thread pool
 // allocations are reported as leaks under ASAN but are not actual leaks.
-extern "C" {
+unsafe extern "C" {
     fn __lsan_disable();
     fn __lsan_enable();
 }

@@ -1,4 +1,4 @@
-use std::io::{self, IsTerminal};
+use supports_color::Stream as SupportsColorStream;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorMode {
@@ -25,11 +25,12 @@ pub fn should_use_color(mode: ColorMode, stream: ColorStream) -> bool {
                 return false;
             }
 
-            // Then check if the stream is a terminal
-            match stream {
-                ColorStream::Stdout => io::stdout().is_terminal(),
-                ColorStream::Stderr => io::stderr().is_terminal(),
-            }
+            let stream = match stream {
+                ColorStream::Stdout => SupportsColorStream::Stdout,
+                ColorStream::Stderr => SupportsColorStream::Stderr,
+            };
+
+            supports_color::on_cached(stream).is_some()
         }
     }
 }
@@ -72,6 +73,7 @@ mod tests {
             is_no_color_set(),
             "NO_COLOR standard: is_no_color_set() should return true when NO_COLOR='1'"
         );
+        assert!(!should_use_color(ColorMode::Auto, ColorStream::Stdout));
 
         // Test 2: NO_COLOR set to empty string
         // Per NO_COLOR standard, even empty value means colors disabled
@@ -80,6 +82,7 @@ mod tests {
             is_no_color_set(),
             "NO_COLOR standard: is_no_color_set() should return true when NO_COLOR='' (empty)"
         );
+        assert!(!should_use_color(ColorMode::Auto, ColorStream::Stdout));
 
         // Test 3: NO_COLOR unset
         unsafe { env::remove_var("NO_COLOR") };

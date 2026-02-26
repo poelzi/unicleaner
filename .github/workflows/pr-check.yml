@@ -53,8 +53,8 @@ jobs:
 
           # Scan only changed files
           if [ -n "${{ steps.changed-files.outputs.files }}" ]; then
-            ./result/bin/unicleaner \
-              --output json \
+            ./result/bin/unicleaner scan \
+              --format json \
               --no-color \
               ${{ steps.changed-files.outputs.files }} \
               > scan-results/findings.json || true
@@ -99,9 +99,23 @@ jobs:
 
           EOF
 
-            # Add each violation
-            jq -r '.violations[] | "#### \(.file_path):\(.line):\(.column)\n\n- **Character**: U+\(.code_point | tonumber | . as $n | "000\($n | tostring)" | .[-4:])\n- **Category**: \(.category)\n- **Severity**: \(.severity)\n- **Issue**: \(.pattern_name)\n- **Description**: \(.description)\n\n---\n"' \
-              scan-results/findings.json >> scan-results/report.md
+            # Add each violation (code point formatted as hex)
+            jq -r '.violations[] | [.file_path, .line, .column, .code_point, .category, .severity, .pattern_name, .message] | @tsv' \
+              scan-results/findings.json \
+              | while IFS=$'\t' read -r file line col code_point category severity issue description; do
+                  printf -v cp_hex '%04X' "$code_point"
+                  cat >> scan-results/report.md << EOF
+          #### ${file}:${line}:${col}
+
+          - **Character**: U+${cp_hex}
+          - **Category**: ${category}
+          - **Severity**: ${severity}
+          - **Issue**: ${issue}
+          - **Description**: ${description}
+
+          ---
+          EOF
+                done
           fi
 
           # Store for comment
@@ -195,8 +209,8 @@ jobs:
       - name: Scan full repository
         run: |
           # Scan entire repo excluding build artifacts
-          ./result/bin/unicleaner \
-            --output json \
+          ./result/bin/unicleaner scan \
+            --format json \
             --no-color \
             . \
             > full-scan.json || true

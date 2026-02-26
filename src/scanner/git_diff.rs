@@ -7,15 +7,44 @@ use crate::Result;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+/// Get the repository root (top-level) directory for a path inside a Git worktree.
+pub fn get_repo_root(path: &Path) -> Result<PathBuf> {
+    let dir = if path.is_file() {
+        path.parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."))
+    } else {
+        path
+    };
+
+    let output = Command::new("git")
+        .arg("rev-parse")
+        .arg("--show-toplevel")
+        .current_dir(dir)
+        .output()
+        .map_err(|e| crate::Error::Git(format!("Failed to run git rev-parse: {}", e)))?;
+
+    if !output.status.success() {
+        return Err(crate::Error::Git(format!(
+            "git rev-parse failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let root = stdout.lines().next().unwrap_or("").trim();
+    if root.is_empty() {
+        return Err(crate::Error::Git(
+            "git rev-parse returned empty toplevel path".to_string(),
+        ));
+    }
+
+    Ok(PathBuf::from(root))
+}
+
 /// Detect if a directory is a Git repository
 pub fn is_git_repository(path: &Path) -> bool {
-    Command::new("git")
-        .arg("rev-parse")
-        .arg("--git-dir")
-        .current_dir(path)
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
+    get_repo_root(path).is_ok()
 }
 
 /// Get list of changed files in the repository
@@ -26,11 +55,13 @@ pub fn is_git_repository(path: &Path) -> bool {
 /// - Empty repository (no commits yet)
 /// - Staging area changes
 pub fn get_changed_files(repo_path: &Path) -> Result<Vec<PathBuf>> {
+    let repo_root = get_repo_root(repo_path)?;
+
     // Check if HEAD exists (repository has commits)
     let head_check = Command::new("git")
         .arg("rev-parse")
         .arg("HEAD")
-        .current_dir(repo_path)
+        .current_dir(&repo_root)
         .output()
         .map_err(|e| crate::Error::Git(format!("Failed to check HEAD: {}", e)))?;
 
@@ -46,7 +77,7 @@ pub fn get_changed_files(repo_path: &Path) -> Result<Vec<PathBuf>> {
 
     let output = Command::new("git")
         .args(&diff_args)
-        .current_dir(repo_path)
+        .current_dir(&repo_root)
         .output()
         .map_err(|e| crate::Error::Git(format!("Failed to run git diff: {}", e)))?;
 
@@ -60,7 +91,7 @@ pub fn get_changed_files(repo_path: &Path) -> Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = String::from_utf8_lossy(&output.stdout)
         .lines()
         .filter(|line| !line.is_empty())
-        .map(|line| repo_path.join(line))
+        .map(|line| repo_root.join(line))
         .collect();
 
     // Get untracked files
@@ -68,7 +99,7 @@ pub fn get_changed_files(repo_path: &Path) -> Result<Vec<PathBuf>> {
         .arg("ls-files")
         .arg("--others")
         .arg("--exclude-standard")
-        .current_dir(repo_path)
+        .current_dir(&repo_root)
         .output()
         .map_err(|e| crate::Error::Git(format!("Failed to run git ls-files: {}", e)))?;
 
@@ -76,7 +107,7 @@ pub fn get_changed_files(repo_path: &Path) -> Result<Vec<PathBuf>> {
         let untracked: Vec<PathBuf> = String::from_utf8_lossy(&untracked_output.stdout)
             .lines()
             .filter(|line| !line.is_empty())
-            .map(|line| repo_path.join(line))
+            .map(|line| repo_root.join(line))
             .collect();
         files.extend(untracked);
     }

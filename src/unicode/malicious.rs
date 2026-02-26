@@ -37,8 +37,37 @@ impl MaliciousPattern {
     }
 }
 
-/// Get all built-in malicious patterns
-pub fn get_malicious_patterns() -> Vec<MaliciousPattern> {
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
+
+/// Static cache of malicious patterns (initialized once)
+static MALICIOUS_PATTERNS: Lazy<Vec<MaliciousPattern>> = Lazy::new(build_malicious_patterns);
+
+static MALICIOUS_LOOKUP: Lazy<HashMap<u32, usize>> = Lazy::new(|| {
+    let mut map = HashMap::new();
+
+    for (idx, pattern) in MALICIOUS_PATTERNS.iter().enumerate() {
+        for &code_point in &pattern.code_points {
+            // First match wins; patterns should be non-overlapping.
+            map.entry(code_point).or_insert(idx);
+        }
+    }
+
+    map
+});
+
+/// Get all built-in malicious patterns (cached, zero allocation after first call)
+pub fn get_malicious_patterns() -> &'static Vec<MaliciousPattern> {
+    &MALICIOUS_PATTERNS
+}
+
+/// Get the malicious pattern for a code point, if any.
+pub fn pattern_for(code_point: u32) -> Option<&'static MaliciousPattern> {
+    let idx = *MALICIOUS_LOOKUP.get(&code_point)?;
+    MALICIOUS_PATTERNS.get(idx)
+}
+
+fn build_malicious_patterns() -> Vec<MaliciousPattern> {
     vec![
         // Zero-width characters
         MaliciousPattern {
@@ -136,6 +165,14 @@ pub fn get_malicious_patterns() -> Vec<MaliciousPattern> {
             code_points: vec![0x2069],
             severity: Severity::Error,
             description: "PDI character detected".to_string(),
+        },
+        // Bidirectional marks (Trojan Source adjacent)
+        MaliciousPattern {
+            name: "bidi-marks".to_string(),
+            category: MaliciousCategory::BidiOverride,
+            code_points: vec![0x061C, 0x200E, 0x200F],
+            severity: Severity::Error,
+            description: "Bidirectional mark detected - can manipulate source display".to_string(),
         },
         // Homoglyph patterns - Cyrillic lookalikes
         MaliciousPattern {
@@ -264,43 +301,7 @@ pub fn get_malicious_patterns() -> Vec<MaliciousPattern> {
 
 /// Check if a code point is in any malicious pattern
 pub fn is_malicious(code_point: u32) -> Option<&'static str> {
-    match code_point {
-        // Zero-width characters
-        0x200B => Some("zero-width-space"),
-        0x200C => Some("zero-width-non-joiner"),
-        0x200D => Some("zero-width-joiner"),
-        0xFEFF => Some("zero-width-no-break-space"),
-        // Bidirectional text controls
-        0x202A => Some("left-to-right-embedding"),
-        0x202B => Some("right-to-left-embedding"),
-        0x202C => Some("pop-directional-formatting"),
-        0x202D => Some("left-to-right-override"),
-        0x202E => Some("right-to-left-override"),
-        0x2066 => Some("left-to-right-isolate"),
-        0x2067 => Some("right-to-left-isolate"),
-        0x2068 => Some("first-strong-isolate"),
-        0x2069 => Some("pop-directional-isolate"),
-        // Cyrillic homoglyphs
-        0x0430 | 0x0435 | 0x043E | 0x0440 | 0x0441 | 0x0445 | 0x0443 | 0x0410 | 0x0415 | 0x041E
-        | 0x0420 | 0x0421 | 0x0425 => Some("cyrillic-homoglyphs"),
-        // Greek homoglyphs
-        0x03B1 | 0x03BF | 0x03C1 | 0x03BD | 0x0391 | 0x039F | 0x03A1 => Some("greek-homoglyphs"),
-        // Fullwidth forms
-        0xFF01..=0xFF5E => Some("fullwidth-forms"),
-        // Mathematical alphanumeric symbols
-        0x1D400..=0x1D7FF => Some("mathematical-alphanumeric"),
-        // Letterlike Symbols that look like letters
-        0x2102 | 0x210D | 0x2115 | 0x2119 | 0x211A | 0x211D | 0x2124 => {
-            Some("mathematical-alphanumeric")
-        }
-        // Combining characters
-        0x0300..=0x036F => Some("combining-characters"),
-        // Invisible separators
-        0x00A0 | 0x1680 | 0x180E | 0x2000..=0x200A | 0x2028 | 0x2029 | 0x202F | 0x205F | 0x3000 => {
-            Some("invisible-separators")
-        }
-        _ => None,
-    }
+    pattern_for(code_point).map(|p| p.name.as_str())
 }
 
 #[cfg(test)]
@@ -334,6 +335,18 @@ mod tests {
         // Should have both Error and Warning severity patterns
         assert!(patterns.iter().any(|p| p.severity == Severity::Error));
         assert!(patterns.iter().any(|p| p.severity == Severity::Warning));
+    }
+
+    #[test]
+    fn test_malicious_patterns_static() {
+        // T058: Verify get_malicious_patterns() returns the same pointer on repeated calls
+        // (i.e., it's cached via once_cell::sync::Lazy, not rebuilt each time)
+        let first = get_malicious_patterns() as *const Vec<MaliciousPattern>;
+        let second = get_malicious_patterns() as *const Vec<MaliciousPattern>;
+        assert_eq!(
+            first, second,
+            "get_malicious_patterns() should return the same static reference"
+        );
     }
 
     #[test]

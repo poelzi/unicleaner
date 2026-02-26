@@ -223,6 +223,34 @@ fn test_verbose_flag() {
 }
 
 #[test]
+fn test_jobs_zero_is_rejected() {
+    let temp_dir = TempDir::new().unwrap();
+    let test_file = create_clean_test_file(&temp_dir);
+
+    let mut cmd = cargo_bin_cmd!("unicleaner");
+    let output = cmd
+        .arg("scan")
+        .arg("--jobs")
+        .arg("0")
+        .arg(&test_file)
+        .output()
+        .unwrap();
+
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "--jobs 0 should fail argument validation"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Number of jobs must be at least 1"),
+        "Expected jobs validation error, got stderr: {}",
+        stderr
+    );
+}
+
+#[test]
 fn test_human_output_default() {
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_clean_test_file(&temp_dir);
@@ -401,6 +429,16 @@ fn test_json_schema_contract() {
                 violation["encoding"].is_string(),
                 "'encoding' should be a string"
             );
+
+            // T050: byte_offset field must be present in JSON output
+            assert!(
+                violation.get("byte_offset").is_some(),
+                "Violation should have 'byte_offset'"
+            );
+            assert!(
+                violation["byte_offset"].is_number(),
+                "'byte_offset' should be a number"
+            );
         }
     }
 
@@ -457,4 +495,106 @@ fn test_severity_filtering() {
         filtered_violations > 0,
         "Should have error-level violations"
     );
+}
+
+// =============================================================================
+// Phase 11: US7 CI Workflow (T053)
+// =============================================================================
+
+/// T053: PR check workflow uses correct CLI flags
+#[test]
+fn test_pr_check_workflow_uses_valid_flags() {
+    let workflow_path =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".github/workflows/pr-check.yml");
+    if !workflow_path.exists() {
+        // Skip if workflow doesn't exist (e.g., in CI without full repo)
+        return;
+    }
+
+    let content = std::fs::read_to_string(&workflow_path).unwrap();
+
+    // Must NOT use old-style --output flag
+    assert!(
+        !content.contains("--output json"),
+        "Workflow should use '--format json', not '--output json'"
+    );
+
+    // Must use 'scan' subcommand before flags
+    assert!(
+        content.contains("unicleaner scan"),
+        "Workflow should use 'unicleaner scan' subcommand"
+    );
+
+    // Must NOT reference deprecated/nonexistent JSON fields.
+    assert!(
+        !content.contains(".description"),
+        "Workflow jq should use .message, not .description"
+    );
+
+    assert!(
+        !content.contains(".pattern)")
+            && !content.contains(".pattern,")
+            && !content.contains(".pattern "),
+        "Workflow jq should use .pattern_name, not .pattern"
+    );
+
+    // Workflow must reference the fields consumed from JSON output.
+    let required_paths = [
+        ".violations",
+        ".files_scanned",
+        ".file_path",
+        ".line",
+        ".column",
+        ".code_point",
+        ".category",
+        ".severity",
+        ".pattern_name",
+        ".message",
+    ];
+
+    for path in required_paths {
+        assert!(
+            content.contains(path),
+            "Workflow must reference JSON path '{}'",
+            path
+        );
+    }
+
+    // Contract-check against actual scanner JSON fields.
+    let temp_dir = TempDir::new().unwrap();
+    let test_file = create_test_file_with_violation(&temp_dir);
+    let mut cmd = cargo_bin_cmd!("unicleaner");
+    let output = cmd
+        .arg("scan")
+        .arg("--format")
+        .arg("json")
+        .arg(&test_file)
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+
+    assert!(json.get("violations").is_some());
+    assert!(json.get("files_scanned").is_some());
+
+    let violations = json["violations"].as_array().expect("violations array");
+    if let Some(violation) = violations.first() {
+        for key in [
+            "file_path",
+            "line",
+            "column",
+            "code_point",
+            "category",
+            "severity",
+            "pattern_name",
+            "message",
+        ] {
+            assert!(
+                violation.get(key).is_some(),
+                "Actual JSON output missing key '{}' required by workflow",
+                key
+            );
+        }
+    }
 }

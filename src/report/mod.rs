@@ -2,6 +2,7 @@
 
 pub mod formatter;
 pub mod json;
+pub mod markdown;
 pub mod violation;
 
 // Re-export main types
@@ -30,13 +31,16 @@ impl ScanResult {
     }
 
     /// Get appropriate exit code
+    /// 0 = success (no violations, no errors)
+    /// 1 = violations found (regardless of errors)
+    /// 3 = errors only (no violations, but some files couldn't be scanned)
     pub fn exit_code(&self) -> i32 {
-        if self.passed() {
-            0
-        } else if !self.violations.is_empty() {
+        if !self.violations.is_empty() {
             1
+        } else if !self.errors.is_empty() {
+            3
         } else {
-            2
+            0
         }
     }
 
@@ -79,6 +83,7 @@ mod tests {
             PathBuf::from("test.rs"),
             1,
             1,
+            0,
             0x200B,
             "test".to_string(),
             MaliciousCategory::ZeroWidth,
@@ -137,6 +142,39 @@ mod tests {
 
         let filtered = result.filter_by_severity(Severity::Warning);
         assert_eq!(filtered.violations.len(), 2); // Error and Warning only
+    }
+
+    // T045: Exit code 3 for errors only
+    #[test]
+    fn test_exit_code_3_errors_only() {
+        let mut result = create_test_scan_result();
+        result.errors.push(ScanError::new(
+            PathBuf::from("missing.rs"),
+            crate::report::violation::ErrorType::IoError,
+            "File not found".to_string(),
+        ));
+        assert_eq!(result.exit_code(), 3);
+    }
+
+    // T046: Exit code 1 for violations with errors
+    #[test]
+    fn test_exit_code_1_violations_with_errors() {
+        let mut result = create_test_scan_result();
+        result
+            .violations
+            .push(create_test_violation(Severity::Error));
+        result.errors.push(ScanError::new(
+            PathBuf::from("missing.rs"),
+            crate::report::violation::ErrorType::IoError,
+            "File not found".to_string(),
+        ));
+        assert_eq!(result.exit_code(), 1);
+    }
+
+    #[test]
+    fn test_exit_code_0_success() {
+        let result = create_test_scan_result();
+        assert_eq!(result.exit_code(), 0);
     }
 
     #[test]

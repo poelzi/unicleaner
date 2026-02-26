@@ -12,7 +12,7 @@ fn test_exit_code_constants() {
 
 #[test]
 fn test_exit_codes_are_unique() {
-    let codes = vec![SUCCESS, VIOLATIONS_FOUND, ERROR, PARTIAL_SUCCESS];
+    let codes = [SUCCESS, VIOLATIONS_FOUND, ERROR, PARTIAL_SUCCESS];
     let unique: std::collections::HashSet<_> = codes.iter().collect();
     assert_eq!(codes.len(), unique.len(), "Exit codes must be unique");
 }

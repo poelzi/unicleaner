@@ -130,6 +130,7 @@ mod tests {
             PathBuf::from("test.rs"),
             10,
             5,
+            0,
             0x200B,
             "zero-width-space".to_string(),
             MaliciousCategory::ZeroWidth,

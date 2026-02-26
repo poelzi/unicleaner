@@ -36,9 +36,6 @@ mod memory_tests {
             let result = scan_file(temp.path());
             assert!(result.is_ok(), "Should scan successfully");
         }
-
-        // If we get here without OOM, test passes
-        assert!(true, "No memory leak detected");
     }
 
     // Memory test: Many small violations shouldn't cause excessive memory
@@ -56,7 +53,7 @@ mod memory_tests {
         assert!(result.is_ok(), "Should handle many violations");
 
         if let Ok(violations) = result {
-            assert!(violations.len() > 0, "Should detect violations");
+            assert!(!violations.is_empty(), "Should detect violations");
             // Having many violations shouldn't cause OOM
         }
     }

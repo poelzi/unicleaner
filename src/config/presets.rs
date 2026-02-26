@@ -30,8 +30,17 @@ impl LanguagePreset {
     }
 }
 
-/// Get all built-in language presets
-pub fn get_all_presets() -> HashMap<String, LanguagePreset> {
+use once_cell::sync::Lazy;
+
+/// Static cache of all presets (initialized once)
+static ALL_PRESETS: Lazy<HashMap<String, LanguagePreset>> = Lazy::new(build_all_presets);
+
+/// Get all built-in language presets (cached, zero allocation after first call)
+pub fn get_all_presets() -> &'static HashMap<String, LanguagePreset> {
+    &ALL_PRESETS
+}
+
+fn build_all_presets() -> HashMap<String, LanguagePreset> {
     let mut presets = HashMap::new();
 
     // Rust preset - conservative ASCII + common symbols
@@ -102,7 +111,7 @@ pub fn get_all_presets() -> HashMap<String, LanguagePreset> {
 
 /// Get a specific preset by name
 pub fn get_preset(name: &str) -> Option<LanguagePreset> {
-    get_all_presets().get(name).cloned()
+    ALL_PRESETS.get(name).cloned()
 }
 
 /// List all available preset names
@@ -176,6 +185,18 @@ mod tests {
         let preset = get_preset("rust");
         assert!(preset.is_some());
         assert_eq!(preset.unwrap().name, "rust");
+    }
+
+    #[test]
+    fn test_presets_static() {
+        // T059: Verify get_all_presets() returns the same pointer on repeated calls
+        // (i.e., it's cached via once_cell::sync::Lazy, not rebuilt each time)
+        let first = get_all_presets() as *const HashMap<String, LanguagePreset>;
+        let second = get_all_presets() as *const HashMap<String, LanguagePreset>;
+        assert_eq!(
+            first, second,
+            "get_all_presets() should return the same static reference"
+        );
     }
 
     #[test]

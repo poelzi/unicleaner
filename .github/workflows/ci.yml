@@ -82,10 +82,13 @@ jobs:
             --timeout 300
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN || secrets.CODECOV_ORG_TOKEN }}
         with:
           files: ./coverage/cobertura.xml
           fail_ci_if_error: false
+          verbose: true
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4

@@ -44,7 +44,7 @@ owo-colors = { version = "4", features = ["supports-colors"] }
 supports-color = "3"
 
 ignore = "=0.4.20"
-globset = "=0.4.10"
+globset = "=0.4.18"
 
 # Parallel processing
 rayon = "1.8"

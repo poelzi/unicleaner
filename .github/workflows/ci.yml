@@ -61,6 +61,7 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
+            accept-flake-config = true
 
       - name: Setup Cachix
         uses: cachix/cachix-action@v16
@@ -112,6 +113,7 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
+            accept-flake-config = true
 
       - name: Setup Cachix
         uses: cachix/cachix-action@v16
@@ -136,6 +138,7 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
+            accept-flake-config = true
 
       - name: Run cargo-audit
         uses: rustsec/audit-check@v1

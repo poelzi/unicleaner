@@ -1,6 +1,13 @@
 {
   description = "Unicleaner - Detect malicious Unicode in source code";
 
+  nixConfig = {
+    extra-substituters = [ "https://unicleaner.cachix.org" ];
+    extra-trusted-public-keys = [
+      "unicleaner.cachix.org-1:jr6SC2rjX1YT5TvTeplGjDJiKmhxsHO4WaJ7LH0PSWw="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     rust-overlay.url = "github:oxalica/rust-overlay";
@@ -63,6 +70,7 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+        isLinuxX86_64 = system == "x86_64-linux";
 
         # Pin toolchain to avoid unexpected breakages.
         rustToolchain = pkgs.rust-bin.stable."1.93.0".default.override {
@@ -84,31 +92,59 @@
 
         # Static musl build for Docker/standalone
         # Use pkgsStatic to ensure all dependencies are statically linked
-        unicleaner-static = pkgs.pkgsStatic.rustPlatform.buildRustPackage {
-          pname = "unicleaner-static";
-          version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
-          src = ./.;
-          cargoLock.lockFile = ./Cargo.lock;
+        unicleaner-static =
+          if isLinuxX86_64 then
+            pkgs.pkgsStatic.rustPlatform.buildRustPackage {
+              pname = "unicleaner-static";
+              version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
+              src = ./.;
+              cargoLock.lockFile = ./Cargo.lock;
 
-          # Add binutils for strip command
-          nativeBuildInputs = [ pkgs.pkgsStatic.binutils ];
-          buildInputs = [ ];
+              # Add binutils for strip command
+              nativeBuildInputs = [ pkgs.pkgsStatic.binutils ];
+              buildInputs = [ ];
 
-          # Strip the binary for minimal size
-          postInstall = ''
-            $STRIP $out/bin/unicleaner
-          '';
+              # Strip the binary for minimal size
+              postInstall = ''
+                $STRIP $out/bin/unicleaner
+              '';
 
-          meta = with pkgs.lib; {
-            description = "Detect malicious Unicode characters in source code (static musl build)";
-            homepage = "https://github.com/poelzi/unicleaner";
-            license = with licenses; [
-              mit
-            ];
-            maintainers = [ ];
-            platforms = [ "x86_64-linux" ];
-          };
-        };
+              meta = with pkgs.lib; {
+                description = "Detect malicious Unicode characters in source code (static musl build)";
+                homepage = "https://github.com/poelzi/unicleaner";
+                license = with licenses; [
+                  mit
+                ];
+                maintainers = [ ];
+                platforms = [ "x86_64-linux" ];
+              };
+            }
+          else
+            null;
+
+        docker-image =
+          if isLinuxX86_64 then
+            pkgs.dockerTools.buildImage {
+              name = "unicleaner";
+              tag = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
+              created = "now";
+
+              copyToRoot = pkgs.buildEnv {
+                name = "image-root";
+                paths = [ unicleaner-static ];
+                pathsToLink = [ "/bin" ];
+              };
+
+              config = {
+                Entrypoint = [ "/bin/unicleaner" ];
+                WorkingDir = "/workspace";
+                Volumes = {
+                  "/workspace" = { };
+                };
+              };
+            }
+          else
+            null;
 
         # Nightly Rust toolchain for fuzzing
         rustNightly = pkgs.rust-bin.selectLatestNightlyWith (
@@ -199,28 +235,12 @@
         packages = {
           default = unicleaner;
           unicleaner = unicleaner;
+        }
+        // pkgs.lib.optionalAttrs isLinuxX86_64 {
           unicleaner-static = unicleaner-static;
 
           # Minimal Docker image with static binary
-          docker = pkgs.dockerTools.buildImage {
-            name = "unicleaner";
-            tag = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
-            created = "now";
-
-            copyToRoot = pkgs.buildEnv {
-              name = "image-root";
-              paths = [ unicleaner-static ];
-              pathsToLink = [ "/bin" ];
-            };
-
-            config = {
-              Entrypoint = [ "/bin/unicleaner" ];
-              WorkingDir = "/workspace";
-              Volumes = {
-                "/workspace" = { };
-              };
-            };
-          };
+          docker = docker-image;
         };
 
         apps =

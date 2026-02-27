@@ -68,7 +68,7 @@ proptest = "1.4.0"
 unicode-normalization = "0.1"
 
 # Benchmarking
-criterion = "0.5"
+criterion = "0.7"
 
 # Test utilities
 tempfile = "3"

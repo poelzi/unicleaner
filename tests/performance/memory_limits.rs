@@ -35,8 +35,13 @@ fn get_memory_usage() -> Option<usize> {
 fn get_memory_usage() -> Option<usize> {
     use std::process::Command;
 
+    let pid = std::process::id().to_string();
+
     let output = Command::new("ps")
-        .args(&["-o", "rss=", "-p", &std::process::id().to_string()])
+        .arg("-o")
+        .arg("rss=")
+        .arg("-p")
+        .arg(&pid)
         .output()
         .ok()?;
 

@@ -51,7 +51,7 @@ rayon = "1.8"
 num_cpus = "1.16"
 
 # Error handling
-thiserror = "1"
+thiserror = "2"
 strsim = "0.11.1"
 once_cell = "1.21.3"
 

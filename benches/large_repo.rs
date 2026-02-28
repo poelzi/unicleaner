@@ -1,9 +1,10 @@
 // Benchmark for large repository scanning (T083)
 // ~10000 files
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use rayon::prelude::*;
 use std::fs;
+use std::hint::black_box;
 use std::io::Write;
 use tempfile::TempDir;
 use unicleaner::scanner::file_scanner::scan_file;

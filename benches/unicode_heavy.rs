@@ -1,6 +1,7 @@
 // Benchmark for Unicode-heavy files (T084)
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 use std::io::Write;
 use tempfile::NamedTempFile;
 use unicleaner::scanner::file_scanner::scan_file;

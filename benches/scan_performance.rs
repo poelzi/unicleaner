@@ -1,7 +1,8 @@
 //! Performance benchmarks for unicleaner scanning operations
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::fs;
+use std::hint::black_box;
 use std::path::PathBuf;
 use tempfile::TempDir;
 use unicleaner::scanner::encoding::detect_and_decode;

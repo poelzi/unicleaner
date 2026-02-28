@@ -1,8 +1,9 @@
 // Benchmark for medium repository scanning (T082)
 // ~1000 files
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::fs;
+use std::hint::black_box;
 use std::io::Write;
 use tempfile::TempDir;
 use unicleaner::scanner::file_scanner::scan_file;

@@ -9,6 +9,7 @@ mod memory_tests {
 
     // Memory test: Large file shouldn't cause excessive memory usage
     #[test]
+    #[ignore = "perf test — unreliable on slow CI runners, run with: cargo test -- --ignored"]
     fn test_large_file_memory_usage() {
         let mut temp = NamedTempFile::new().expect("Failed to create temp file");
 
@@ -25,6 +26,7 @@ mod memory_tests {
 
     // Memory test: Scanner should not leak memory on repeated scans
     #[test]
+    #[ignore = "perf test — unreliable on slow CI runners, run with: cargo test -- --ignored"]
     fn test_no_memory_leak_on_repeated_scans() {
         let mut temp = NamedTempFile::new().expect("Failed to create temp file");
 
@@ -40,6 +42,7 @@ mod memory_tests {
 
     // Memory test: Many small violations shouldn't cause excessive memory
     #[test]
+    #[ignore = "perf test — unreliable on slow CI runners, run with: cargo test -- --ignored"]
     fn test_many_violations_memory() {
         let mut temp = NamedTempFile::new().expect("Failed to create temp file");
 

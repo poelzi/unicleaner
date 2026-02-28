@@ -29,16 +29,21 @@ jobs:
           - homoglyph_detector
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: fuzz-${{ matrix.target }}
 
       - name: Install cargo-fuzz
         run: cargo install cargo-fuzz
 
       - name: Cache fuzz corpus
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: fuzz/corpus
           key: fuzz-corpus-${{ matrix.target }}-${{ github.sha }}

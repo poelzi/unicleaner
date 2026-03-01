@@ -574,4 +574,73 @@ mod tests {
         );
         assert_eq!(result.unwrap(), text);
     }
+
+    #[test]
+    fn test_detect_heuristic_tiny_input() {
+        // Less than 4 bytes should return None
+        assert!(detect_heuristic(&[0x41]).is_none());
+        assert!(detect_heuristic(&[0x41, 0x42]).is_none());
+        assert!(detect_heuristic(&[0x41, 0x42, 0x43]).is_none());
+    }
+
+    #[test]
+    fn test_detect_and_decode_unrecognizable() {
+        // Bytes that are not valid UTF-8, UTF-16, or UTF-32
+        let bytes = [0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87];
+        let result = detect_and_decode(&bytes);
+        assert!(result.is_err(), "Unrecognizable bytes should error");
+    }
+
+    #[test]
+    fn test_detect_decode_with_encoding_unrecognizable() {
+        let bytes = [0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87];
+        let result = detect_decode_with_encoding(&bytes);
+        assert!(result.is_err(), "Unrecognizable bytes should error");
+    }
+
+    #[test]
+    fn test_is_binary_empty() {
+        assert!(!is_binary(&[]), "Empty input should not be binary");
+    }
+
+    #[test]
+    fn test_detect_encoding_convenience() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let file = temp.path().join("test.txt");
+        std::fs::write(&file, "Hello world").unwrap();
+        let result = detect_encoding(&file);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "UTF-8");
+    }
+
+    #[test]
+    fn test_decode_utf32_le_bad_length() {
+        // Not a multiple of 4
+        let bytes = [0x41, 0x00, 0x00, 0x00, 0x42];
+        let result = decode_utf32_le(&bytes);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decode_utf32_be_bad_length() {
+        let bytes = [0x00, 0x00, 0x00, 0x41, 0x42];
+        let result = decode_utf32_be(&bytes);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decode_utf32_le_surrogate() {
+        // U+D800 is a surrogate — invalid as a code point
+        let bytes: [u8; 4] = [0x00, 0xD8, 0x00, 0x00];
+        let result = decode_utf32_le(&bytes);
+        assert!(result.is_err(), "Surrogate code point should error");
+    }
+
+    #[test]
+    fn test_decode_utf32_be_surrogate() {
+        // U+D800 in big-endian
+        let bytes: [u8; 4] = [0x00, 0x00, 0xD8, 0x00];
+        let result = decode_utf32_be(&bytes);
+        assert!(result.is_err(), "Surrogate code point should error");
+    }
 }

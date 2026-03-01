@@ -48,78 +48,25 @@ jobs:
       - name: Scan changed files
         id: scan
         run: |
-          # Create results directory
           mkdir -p scan-results
 
-          # Scan only changed files
           if [ -n "${{ steps.changed-files.outputs.files }}" ]; then
+            # Scan with JSON to stdout + markdown report to file in one pass
             ./result/bin/unicleaner scan \
               --format json \
               --no-color \
+              --verbose \
+              --output markdown:scan-results/report.md \
               ${{ steps.changed-files.outputs.files }} \
               > scan-results/findings.json || true
           else
-            echo '{"violations": [], "files_scanned": 0}' > scan-results/findings.json
+            echo '{"violations":[],"files_scanned":0,"files_clean":0,"files_with_violations":0,"errors":[],"duration":{"secs":0,"nanos":0},"config_used":"unicleaner.toml"}' > scan-results/findings.json
+            echo "# Unicleaner Scan: PASSED" > scan-results/report.md
           fi
 
-          # Check if we found violations
           VIOLATION_COUNT=$(jq '.violations | length' scan-results/findings.json)
           echo "violation_count=$VIOLATION_COUNT" >> $GITHUB_OUTPUT
           echo "Found $VIOLATION_COUNT violations"
-
-      - name: Parse scan results
-        id: parse
-        run: |
-          # Parse JSON and create markdown report
-          cat > scan-results/report.md << 'EOF'
-          ## 🔍 Unicode Security Scan Results
-
-          EOF
-
-          VIOLATION_COUNT=$(jq '.violations | length' scan-results/findings.json)
-          FILES_SCANNED=$(jq '.files_scanned' scan-results/findings.json)
-
-          if [ "$VIOLATION_COUNT" -eq 0 ]; then
-            cat >> scan-results/report.md << EOF
-          ✅ **No malicious Unicode detected!**
-
-          - Files scanned: $FILES_SCANNED
-          - Violations found: 0
-
-          All files are clean. Great job! 🎉
-          EOF
-          else
-            cat >> scan-results/report.md << EOF
-          ⚠️ **Found $VIOLATION_COUNT potential security issue(s)**
-
-          - Files scanned: $FILES_SCANNED
-          - Violations found: $VIOLATION_COUNT
-
-          ### Violations
-
-          EOF
-
-            # Add each violation (code point formatted as hex)
-            jq -r '.violations[] | [.file_path, .line, .column, .code_point, .category, .severity, .pattern_name, .message] | @tsv' \
-              scan-results/findings.json \
-              | while IFS=$'\t' read -r file line col code_point category severity issue description; do
-                  printf -v cp_hex '%04X' "$code_point"
-                  cat >> scan-results/report.md << EOF
-          #### ${file}:${line}:${col}
-
-          - **Character**: U+${cp_hex}
-          - **Category**: ${category}
-          - **Severity**: ${severity}
-          - **Issue**: ${issue}
-          - **Description**: ${description}
-
-          ---
-          EOF
-                done
-          fi
-
-          # Store for comment
-          echo "has_violations=$([ "$VIOLATION_COUNT" -gt 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
 
       - name: Comment on PR
         uses: actions/github-script@v7
@@ -138,7 +85,7 @@ jobs:
 
             const botComment = comments.find(comment =>
               comment.user.type === 'Bot' &&
-              comment.body.includes('Unicode Security Scan Results')
+              (comment.body.includes('Unicleaner Scan:') || comment.body.includes('Unicode Security Scan Results'))
             );
 
             // Create or update comment
@@ -208,10 +155,10 @@ jobs:
 
       - name: Scan full repository
         run: |
-          # Scan entire repo excluding build artifacts
           ./result/bin/unicleaner scan \
             --format json \
             --no-color \
+            --output markdown:full-scan-report.md \
             . \
             > full-scan.json || true
 

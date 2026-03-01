@@ -240,4 +240,92 @@ mod tests {
             "Should return ranges for .rs files with rust preset"
         );
     }
+
+    #[test]
+    fn test_allow_by_default_with_denied_code_points() {
+        let mut config = Configuration {
+            deny_by_default: false,
+            ..Default::default()
+        };
+        let mut rule = rules::FileRule::new("*.rs").expect("valid pattern");
+        rule.denied_code_points.push(0x0041); // Deny 'A'
+        config.file_rules.push(rule);
+
+        let path = PathBuf::from("test.rs");
+        assert!(
+            !config.is_code_point_allowed(&path, 0x0041),
+            "Explicitly denied code point should be rejected"
+        );
+        assert!(
+            config.is_code_point_allowed(&path, 0x0042),
+            "'B' should still be allowed"
+        );
+    }
+
+    #[test]
+    fn test_get_allowed_ranges_rule_with_empty_ranges() {
+        let mut config = Configuration::default();
+        // Rule matches but has empty allowed_ranges -> falls through to preset
+        let rule = rules::FileRule::new("*.rs").expect("valid pattern");
+        config.file_rules.push(rule);
+        config
+            .language_presets
+            .insert("rs".to_string(), "rust".to_string());
+
+        let path = PathBuf::from("test.rs");
+        let ranges = config.get_allowed_ranges(&path);
+        assert!(
+            ranges.is_some(),
+            "Should fall through to preset when rule has empty ranges"
+        );
+    }
+
+    #[test]
+    fn test_get_allowed_ranges_invalid_preset() {
+        let mut config = Configuration::default();
+        config
+            .language_presets
+            .insert("rs".to_string(), "nonexistent_preset".to_string());
+
+        let path = PathBuf::from("test.rs");
+        let ranges = config.get_allowed_ranges(&path);
+        assert!(ranges.is_none(), "Invalid preset name should return None");
+    }
+
+    #[test]
+    fn test_deny_by_default_with_rule_allowlist() {
+        let mut config = Configuration::default(); // deny_by_default = true
+        let mut rule = rules::FileRule::new("*.rs").expect("valid pattern");
+        rule.allowed_ranges.push(UnicodeRange::new(0x0000, 0x00FF)); // Allow Basic Latin + Latin-1
+        config.file_rules.push(rule);
+
+        let path = PathBuf::from("test.rs");
+        assert!(
+            config.is_code_point_allowed(&path, 0x00E9),
+            "'é' should be allowed by rule allowlist"
+        );
+        assert!(
+            !config.is_code_point_allowed(&path, 0x0100),
+            "Code point outside allowlist should be denied"
+        );
+    }
+
+    #[test]
+    fn test_deny_by_default_rule_with_denied_code_points() {
+        let mut config = Configuration::default(); // deny_by_default = true
+        let mut rule = rules::FileRule::new("*.rs").expect("valid pattern");
+        rule.denied_code_points.push(0x0041); // Deny 'A'
+        rule.allowed_ranges.push(UnicodeRange::new(0x0000, 0x007F)); // Allow ASCII
+        config.file_rules.push(rule);
+
+        let path = PathBuf::from("test.rs");
+        assert!(
+            !config.is_code_point_allowed(&path, 0x0041),
+            "'A' explicitly denied even though in allowlist"
+        );
+        assert!(
+            config.is_code_point_allowed(&path, 0x0042),
+            "'B' should still be allowed"
+        );
+    }
 }

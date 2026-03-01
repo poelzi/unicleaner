@@ -224,4 +224,93 @@ mod tests {
             "Combining mark should start at byte offset 1"
         );
     }
+
+    #[test]
+    fn test_denied_code_points() {
+        // 'é' (U+00E9) is not malicious but we deny it explicitly
+        let content = "caf\u{00E9}";
+        let violations = detect_in_string_with_policy(
+            content,
+            &PathBuf::from("test.rs"),
+            false,
+            None,
+            &[0x00E9],
+        );
+
+        assert_eq!(violations.len(), 1);
+        assert_eq!(violations[0].code_point, 0x00E9);
+        assert_eq!(violations[0].pattern_name, "explicitly-denied");
+    }
+
+    #[test]
+    fn test_deny_by_default_with_no_allowlist() {
+        // 'é' (U+00E9) is outside ASCII range; deny-by-default with no custom ranges
+        let content = "caf\u{00E9}";
+        let violations = detect_in_string_with_policy(
+            content,
+            &PathBuf::from("test.rs"),
+            true,
+            None, // Falls back to default safe ASCII
+            &[],
+        );
+
+        // 'é' should be flagged as disallowed
+        assert!(violations.iter().any(|v| v.code_point == 0x00E9));
+        let v = violations.iter().find(|v| v.code_point == 0x00E9).unwrap();
+        assert_eq!(v.pattern_name, "disallowed-code-point");
+    }
+
+    #[test]
+    fn test_deny_by_default_with_allowlist() {
+        // 'é' (U+00E9) is explicitly allowed via range
+        let ranges = vec![UnicodeRange::new(0x0000, 0x00FF)]; // Basic Latin + Latin-1 Supplement
+        let content = "caf\u{00E9}";
+        let violations = detect_in_string_with_policy(
+            content,
+            &PathBuf::from("test.rs"),
+            true,
+            Some(&ranges),
+            &[],
+        );
+
+        // 'é' should NOT be flagged
+        assert!(violations.iter().all(|v| v.code_point != 0x00E9));
+    }
+
+    #[test]
+    fn test_context_snippet_long_line() {
+        // Create a line longer than 120 chars with a violation in the middle
+        let prefix = "a".repeat(80);
+        let suffix = "b".repeat(80);
+        let content = format!("{}\u{200B}{}", prefix, suffix);
+        let violations = detect_in_string(&content, &PathBuf::from("test.rs"));
+
+        assert_eq!(violations.len(), 1);
+        // Context should be truncated with "..." markers
+        assert!(violations[0].context.contains("..."));
+    }
+
+    #[test]
+    fn test_is_allowed_by_policy_with_ranges() {
+        let ranges = vec![UnicodeRange::new(0x0041, 0x005A)]; // A-Z only
+        assert!(is_allowed_by_policy(0x0041, Some(&ranges))); // 'A'
+        assert!(!is_allowed_by_policy(0x0061, Some(&ranges))); // 'a' not in range
+    }
+
+    #[test]
+    fn test_is_allowed_by_policy_default() {
+        // Default: safe ASCII (0x0009-0x000D, 0x0020-0x007E)
+        assert!(is_allowed_by_policy(0x0020, None)); // space
+        assert!(is_allowed_by_policy(0x007E, None)); // tilde
+        assert!(is_allowed_by_policy(0x0009, None)); // tab
+        assert!(!is_allowed_by_policy(0x0080, None)); // outside ASCII
+        assert!(!is_allowed_by_policy(0x0000, None)); // NUL
+    }
+
+    #[test]
+    fn test_context_snippet_short_line() {
+        let line = "short";
+        let snippet = context_snippet(line, 2);
+        assert_eq!(snippet, "short"); // No truncation needed
+    }
 }

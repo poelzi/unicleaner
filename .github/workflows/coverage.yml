@@ -64,7 +64,7 @@ jobs:
           COVERAGE_PCT=$(echo "$COVERAGE * 100" | bc)
           echo "Coverage: ${COVERAGE_PCT}%"
 
-          THRESHOLD=80
+          THRESHOLD=95
           if (( $(echo "$COVERAGE_PCT < $THRESHOLD" | bc -l) )); then
             echo "Coverage ${COVERAGE_PCT}% is below threshold ${THRESHOLD}%"
             exit 1

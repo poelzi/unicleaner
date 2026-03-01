@@ -8,6 +8,7 @@ pub mod violation;
 // Re-export main types
 pub use violation::{ScanError, Violation};
 
+use crate::cli::args::OutputFormat;
 use crate::unicode::malicious::Severity;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -47,6 +48,74 @@ impl ScanResult {
     /// Total number of violations
     pub fn total_violations(&self) -> usize {
         self.violations.len()
+    }
+
+    /// Format this scan result in the given output format.
+    ///
+    /// This is the central dispatch for all output formats; both `scan` and
+    /// `format-report` funnel through here so the logic is in one place.
+    pub fn format(
+        &self,
+        format: OutputFormat,
+        verbose: bool,
+        quiet: bool,
+    ) -> Result<String, String> {
+        match format {
+            OutputFormat::Human => {
+                let full = formatter::format_human(self, false, verbose);
+                if quiet {
+                    // Only show from "Scan Result:" onwards
+                    if let Some(pos) = full
+                        .find("\nScan Result:")
+                        .or_else(|| full.find("Scan Result:"))
+                    {
+                        Ok(full[pos..].to_string())
+                    } else {
+                        Ok(full)
+                    }
+                } else {
+                    Ok(full)
+                }
+            }
+            OutputFormat::Json => {
+                let json = if quiet {
+                    json::format_json_compact(self)
+                } else {
+                    json::format_json(self)
+                };
+                json.map_err(|e| format!("Error formatting JSON: {}", e))
+            }
+            OutputFormat::Markdown => {
+                let full = markdown::format_markdown(self, verbose);
+                if quiet {
+                    if let Some(pos) = full.find("## Summary") {
+                        Ok(full[pos..].to_string())
+                    } else {
+                        Ok(full)
+                    }
+                } else {
+                    Ok(full)
+                }
+            }
+            OutputFormat::Github => {
+                let mut out = String::new();
+                for v in &self.violations {
+                    out.push_str(&format!(
+                        "::error file={},line={},col={}::{}\n",
+                        v.file_path.display(),
+                        v.line,
+                        v.column,
+                        v.message,
+                    ));
+                }
+                Ok(out)
+            }
+            OutputFormat::Gitlab => {
+                // GitLab CI uses JSON with specific schema; for now use standard JSON
+                json::format_json(self)
+                    .map_err(|e| format!("Error formatting GitLab output: {}", e))
+            }
+        }
     }
 
     /// Filter violations by minimum severity level

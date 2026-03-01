@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::path::PathBuf;
 use std::process;
 use std::time::Instant;
@@ -7,8 +8,6 @@ use unicleaner::config::Configuration;
 use unicleaner::config::presets;
 use unicleaner::report::ScanResult;
 use unicleaner::report::formatter::format_human;
-use unicleaner::report::json::{format_json, format_json_compact};
-use unicleaner::report::markdown::format_markdown;
 use unicleaner::scanner::git_diff;
 use unicleaner::scanner::parallel::scan_files_parallel;
 use unicleaner::scanner::walker::{WalkConfig, walk_paths};
@@ -30,6 +29,13 @@ fn main() {
             Ok(code) => code,
             Err(e) => {
                 eprintln!("Fatal error: {}", e);
+                2
+            }
+        },
+        Command::FormatReport { input } => match run_format_report(&args, input.as_deref()) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("Error: {}", e);
                 2
             }
         },
@@ -57,13 +63,14 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
     let start_time = Instant::now();
 
     // Extract scan parameters from command
-    let (paths, jobs, diff, encoding) = match args.get_command() {
+    let (paths, jobs, diff, encoding, outputs) = match args.get_command() {
         Command::Scan {
             paths,
             jobs,
             diff,
             encoding,
-        } => (paths, jobs, diff, encoding),
+            outputs,
+        } => (paths, jobs, diff, encoding, outputs),
         _ => unreachable!(),
     };
 
@@ -237,90 +244,100 @@ fn run_scan(args: &Args) -> Result<i32, Box<dyn std::error::Error>> {
         result = result.filter_by_severity(min_severity.to_severity());
     }
 
-    // Format and display output
+    // Format and display primary output to stdout
     let color_mode = args.get_color_mode();
-    let use_color = should_use_color(color_mode, ColorStream::Stdout);
+    let _use_color = should_use_color(color_mode, ColorStream::Stdout);
 
-    match args.format {
-        OutputFormat::Human => {
-            let output = format_human(&result, use_color, args.verbose);
-            if !args.quiet {
-                print!("{}", output);
+    // For human format with color, use the dedicated formatter
+    let stdout_output = if matches!(args.format, OutputFormat::Human) {
+        let use_color = should_use_color(color_mode, ColorStream::Stdout);
+        let full = format_human(&result, use_color, args.verbose);
+        if args.quiet {
+            if let Some(pos) = full
+                .find("\nScan Result:")
+                .or_else(|| full.find("Scan Result:"))
+            {
+                full[pos..].to_string()
             } else {
-                // In quiet mode, only show summary
-                let lines: Vec<&str> = output.lines().collect();
-                if let Some(summary_start) = lines
-                    .iter()
-                    .position(|l| l.starts_with("\nScan Result:") || l.starts_with("Scan Result:"))
-                {
-                    for line in &lines[summary_start..] {
-                        println!("{}", line);
-                    }
-                }
+                full
+            }
+        } else {
+            full
+        }
+    } else {
+        match result.format(args.format, args.verbose, args.quiet) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("{}", e);
+                return Ok(2);
             }
         }
-        OutputFormat::Json => {
-            // Use compact JSON for piping, pretty JSON for interactive use
-            let json_output = if args.quiet {
-                format_json_compact(&result)
-            } else {
-                format_json(&result)
-            };
+    };
 
-            match json_output {
-                Ok(json) => println!("{}", json),
-                Err(e) => {
-                    eprintln!("Error formatting JSON output: {}", e);
-                    return Ok(2);
-                }
+    print!("{}", stdout_output);
+
+    // GitHub format also prints a summary to stderr
+    if matches!(args.format, OutputFormat::Github) && !args.quiet {
+        eprintln!(
+            "\nScan complete: {} violations found",
+            result.violations.len()
+        );
+    }
+
+    // Write additional --output files
+    for spec in &outputs {
+        let content = match result.format(spec.format, args.verbose, false) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Error formatting output for {}: {}", spec.path.display(), e);
+                return Ok(2);
             }
+        };
+        if let Err(e) = std::fs::write(&spec.path, &content) {
+            eprintln!("Error writing {}: {}", spec.path.display(), e);
+            return Ok(2);
         }
-        OutputFormat::Markdown => {
-            let output = format_markdown(&result, args.verbose);
-            if !args.quiet {
-                print!("{}", output);
-            } else {
-                // In quiet mode, only show summary table
-                let lines: Vec<&str> = output.lines().collect();
-                if let Some(summary_start) = lines.iter().position(|l| l.starts_with("## Summary"))
-                {
-                    for line in &lines[summary_start..] {
-                        println!("{}", line);
-                    }
-                }
-            }
-        }
-        OutputFormat::Github => {
-            // GitHub Actions output format: ::error file={},line={},col={}::{}
-            for violation in &result.violations {
-                println!(
-                    "::error file={},line={},col={}::{}",
-                    violation.file_path.display(),
-                    violation.line,
-                    violation.column,
-                    violation.message
-                );
-            }
-            if !args.quiet {
-                eprintln!(
-                    "\nScan complete: {} violations found",
-                    result.violations.len()
-                );
-            }
-        }
-        OutputFormat::Gitlab => {
-            // GitLab CI uses JSON format with specific schema
-            // For now, use standard JSON format
-            let json_output = format_json(&result);
-            match json_output {
-                Ok(json) => println!("{}", json),
-                Err(e) => {
-                    eprintln!("Error formatting GitLab output: {}", e);
-                    return Ok(2);
-                }
-            }
+        if args.verbose {
+            eprintln!("Wrote {:?} output to {}", spec.format, spec.path.display());
         }
     }
+
+    Ok(result.exit_code())
+}
+
+fn run_format_report(
+    args: &Args,
+    input: Option<&std::path::Path>,
+) -> Result<i32, Box<dyn std::error::Error>> {
+    // Read JSON from file or stdin
+    let json_data = match input {
+        Some(path) if path != std::path::Path::new("-") => std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read '{}': {}", path.display(), e))?,
+        _ => {
+            let mut buf = String::new();
+            std::io::stdin()
+                .read_to_string(&mut buf)
+                .map_err(|e| format!("Failed to read stdin: {}", e))?;
+            buf
+        }
+    };
+
+    // Parse the JSON into a ScanResult
+    let result: ScanResult = serde_json::from_str(&json_data)
+        .map_err(|e| format!("Failed to parse JSON report: {}", e))?;
+
+    // Format in the requested output format
+    // For human format with color, use the dedicated formatter
+    let output = if matches!(args.format, OutputFormat::Human) {
+        let use_color = should_use_color(args.get_color_mode(), ColorStream::Stdout);
+        format_human(&result, use_color, args.verbose)
+    } else {
+        result
+            .format(args.format, args.verbose, args.quiet)
+            .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?
+    };
+
+    print!("{}", output);
 
     Ok(result.exit_code())
 }

@@ -501,7 +501,7 @@ fn test_severity_filtering() {
 // Phase 11: US7 CI Workflow (T053)
 // =============================================================================
 
-/// T053: PR check workflow uses correct CLI flags
+/// T053: PR check workflow uses correct CLI flags and --output for markdown
 #[test]
 fn test_pr_check_workflow_uses_valid_flags() {
     let workflow_path =
@@ -513,54 +513,31 @@ fn test_pr_check_workflow_uses_valid_flags() {
 
     let content = std::fs::read_to_string(&workflow_path).unwrap();
 
-    // Must NOT use old-style --output flag
-    assert!(
-        !content.contains("--output json"),
-        "Workflow should use '--format json', not '--output json'"
-    );
-
-    // Must use 'scan' subcommand before flags
+    // Must use 'scan' subcommand
     assert!(
         content.contains("unicleaner scan"),
         "Workflow should use 'unicleaner scan' subcommand"
     );
 
-    // Must NOT reference deprecated/nonexistent JSON fields.
+    // Must use --format json for machine-readable output
     assert!(
-        !content.contains(".description"),
-        "Workflow jq should use .message, not .description"
+        content.contains("--format json"),
+        "Workflow should use '--format json' for JSON output"
     );
 
+    // Must use --output markdown: to generate PR comment report
     assert!(
-        !content.contains(".pattern)")
-            && !content.contains(".pattern,")
-            && !content.contains(".pattern "),
-        "Workflow jq should use .pattern_name, not .pattern"
+        content.contains("--output markdown:"),
+        "Workflow should use '--output markdown:' for markdown report generation"
     );
 
-    // Workflow must reference the fields consumed from JSON output.
-    let required_paths = [
-        ".violations",
-        ".files_scanned",
-        ".file_path",
-        ".line",
-        ".column",
-        ".code_point",
-        ".category",
-        ".severity",
-        ".pattern_name",
-        ".message",
-    ];
+    // Workflow still uses jq for violation counting from JSON
+    assert!(
+        content.contains(".violations"),
+        "Workflow must reference .violations for counting"
+    );
 
-    for path in required_paths {
-        assert!(
-            content.contains(path),
-            "Workflow must reference JSON path '{}'",
-            path
-        );
-    }
-
-    // Contract-check against actual scanner JSON fields.
+    // Contract-check: verify actual scanner JSON output has expected fields.
     let temp_dir = TempDir::new().unwrap();
     let test_file = create_test_file_with_violation(&temp_dir);
     let mut cmd = cargo_bin_cmd!("unicleaner");

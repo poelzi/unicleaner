@@ -3,6 +3,7 @@
 use crate::cli::output::ColorMode;
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Debug, Parser)]
 #[command(name = "unicleaner")]
@@ -75,6 +76,18 @@ pub enum Command {
         /// Force a specific encoding (auto-detect if not specified)
         #[arg(long, value_enum)]
         encoding: Option<EncodingOption>,
+
+        /// Write additional output format to file (format:path, e.g. markdown:report.md)
+        #[arg(short, long = "output", value_name = "FORMAT:PATH")]
+        outputs: Vec<OutputSpec>,
+    },
+
+    /// Convert a JSON scan report to another format (e.g. markdown)
+    #[command(name = "format-report")]
+    FormatReport {
+        /// Input JSON file (use - or omit for stdin)
+        #[arg(value_name = "FILE")]
+        input: Option<PathBuf>,
     },
 
     /// Generate a default configuration file
@@ -111,6 +124,45 @@ pub enum OutputFormat {
     Github,
     /// GitLab CI format
     Gitlab,
+}
+
+/// Specification for an additional output: `format:path`
+#[derive(Debug, Clone)]
+pub struct OutputSpec {
+    pub format: OutputFormat,
+    pub path: PathBuf,
+}
+
+impl FromStr for OutputSpec {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let (fmt_str, path_str) = s.split_once(':').ok_or_else(|| {
+            format!(
+                "invalid output spec '{}': expected format:path (e.g. markdown:report.md)",
+                s
+            )
+        })?;
+
+        let format = match fmt_str.to_lowercase().as_str() {
+            "human" => OutputFormat::Human,
+            "json" => OutputFormat::Json,
+            "markdown" | "md" => OutputFormat::Markdown,
+            "github" => OutputFormat::Github,
+            "gitlab" => OutputFormat::Gitlab,
+            _ => {
+                return Err(format!(
+                    "unknown format '{}': expected one of human, json, markdown, github, gitlab",
+                    fmt_str
+                ));
+            }
+        };
+
+        Ok(OutputSpec {
+            format,
+            path: PathBuf::from(path_str),
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -217,6 +269,7 @@ impl Args {
             diff: false,
             jobs: None,
             encoding: None,
+            outputs: vec![],
         })
     }
 
@@ -238,11 +291,16 @@ impl Clone for Command {
                 diff,
                 jobs,
                 encoding,
+                outputs,
             } => Command::Scan {
                 paths: paths.clone(),
                 diff: *diff,
                 jobs: *jobs,
                 encoding: *encoding,
+                outputs: outputs.clone(),
+            },
+            Command::FormatReport { input } => Command::FormatReport {
+                input: input.clone(),
             },
             Command::Init { output, force } => Command::Init {
                 output: output.clone(),

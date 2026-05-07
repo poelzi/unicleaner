@@ -4,7 +4,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-use crate::cleaner::{CleanPolicy, clean};
+use crate::cleaner::{CleanAction, CleanPolicy, clean};
 use crate::cli::args::CleanPolicyPreset;
 use crate::cli::exit_codes;
 use crate::config::Configuration;
@@ -66,11 +66,16 @@ pub fn run(
 
     let result = clean(&input, &policy);
 
+    let report_only = is_report_only_policy(&policy);
+
     if in_place {
         let target = source_path.expect("source_path is Some for in-place mode");
         if let Err(e) = atomic_write(&target, result.output.as_bytes()) {
             eprintln!("Error: failed to rewrite '{}': {}", target.display(), e);
             return exit_codes::ERROR;
+        }
+        if report_only && !result.violations.is_empty() {
+            return exit_codes::VIOLATIONS_FOUND;
         }
         return exit_codes::SUCCESS;
     }
@@ -82,12 +87,20 @@ pub fn run(
         return exit_codes::ERROR;
     }
 
-    // report-only mode that found violations: signal with VIOLATIONS_FOUND.
-    if matches!(preset, CleanPolicyPreset::ReportOnly) && !result.violations.is_empty() {
+    // Report-only mode that found violations: signal with VIOLATIONS_FOUND.
+    if report_only && !result.violations.is_empty() {
         return exit_codes::VIOLATIONS_FOUND;
     }
 
     exit_codes::SUCCESS
+}
+
+fn is_report_only_policy(policy: &CleanPolicy) -> bool {
+    policy.default_action == CleanAction::KeepWithMark
+        && policy
+            .per_category
+            .values()
+            .all(|action| *action == CleanAction::KeepWithMark)
 }
 
 fn resolve_policy(
@@ -121,6 +134,8 @@ fn resolve_policy(
 /// Atomically write `bytes` to `target`: write to `<target>.tmp.<pid>`,
 /// fsync, then rename. Removes the temp file on error.
 fn atomic_write(target: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let permissions = std::fs::metadata(target)?.permissions();
+
     let parent = target
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
@@ -146,6 +161,7 @@ fn atomic_write(target: &Path, bytes: &[u8]) -> std::io::Result<()> {
             .write(true)
             .create_new(true)
             .open(&tmp_path)?;
+        tmp.set_permissions(permissions)?;
         tmp.write_all(bytes)?;
         tmp.sync_all()?;
         Ok(())

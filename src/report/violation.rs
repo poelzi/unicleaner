@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// Represents a detected malicious Unicode character
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Violation {
     pub file_path: PathBuf,
     pub line: usize,
@@ -78,7 +78,7 @@ impl Violation {
 }
 
 /// Error type for files that couldn't be scanned
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ScanError {
     pub file_path: PathBuf,
     pub error_type: ErrorType,

@@ -21,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`unicleaner clean` CLI subcommand** — sanitize a file or stdin to
   stdout (default) or atomically rewrite the file with `--in-place`.
   Honors `--policy {strict|lossy|report-only}`, `--nfc`, and the global
-  `--config` flag (optional `[cleaner]` block).
+  `--config` flag (optional `[cleaner]` block). The subcommand currently
+  takes a single path; multi-path mode is not yet supported.
 - Optional `[cleaner]` block in `unicleaner.toml`; documented in
   `examples/unicleaner.toml`.
 - Throughput benchmark (`benches/clean_throughput.rs`) and fuzz target

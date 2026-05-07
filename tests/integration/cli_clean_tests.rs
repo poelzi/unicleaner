@@ -3,6 +3,9 @@
 use std::fs;
 use std::path::Path;
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use assert_cmd::cargo_bin_cmd;
 use tempfile::TempDir;
 
@@ -63,8 +66,29 @@ fn cli_clean_in_place_atomic() {
     assert!(leftovers.is_empty(), "no .tmp files should remain");
 }
 
+#[cfg(unix)]
+#[test]
+fn cli_clean_in_place_preserves_permissions() {
+    let dir = TempDir::new().unwrap();
+    let target = dir.path().join("script.sh");
+    fs::copy(fixture("zwsp.txt"), &target).unwrap();
+    fs::set_permissions(&target, fs::Permissions::from_mode(0o700)).unwrap();
+
+    let mut cmd = cargo_bin_cmd!("unicleaner");
+    cmd.arg("clean")
+        .arg("--in-place")
+        .arg(&target)
+        .assert()
+        .success();
+
+    let mode = fs::metadata(&target).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode, 0o700, "in-place rewrite must preserve file mode");
+}
+
 #[test]
 fn cli_clean_missing_file_errors() {
+    // We pin to the exact stderr prefix produced by `cli::clean::run` so
+    // the test is locale-independent.
     let mut cmd = cargo_bin_cmd!("unicleaner");
     let assert = cmd
         .arg("clean")
@@ -74,8 +98,8 @@ fn cli_clean_missing_file_errors() {
 
     let stderr = String::from_utf8_lossy(&assert.get_output().stderr).to_string();
     assert!(
-        stderr.contains("failed to read") || stderr.to_lowercase().contains("no such file"),
-        "stderr should mention read failure, got: {}",
+        stderr.starts_with("Error: failed to read 'does/not/exist.txt'"),
+        "stderr must start with the expected error prefix, got: {}",
         stderr
     );
 }
@@ -167,6 +191,33 @@ default_action = { kind = "replace", value = "�" }
     let out = assert.get_output().stdout.clone();
     let expected = read_bytes(&fixture("bidi.lossy.txt"));
     assert_eq!(out, expected);
+}
+
+#[test]
+fn cli_clean_config_report_only_signals_violations_found() {
+    let dir = TempDir::new().unwrap();
+    let cfg = dir.path().join("unicleaner.toml");
+    fs::write(
+        &cfg,
+        r#"
+[cleaner]
+default_action = { kind = "keep_with_mark" }
+"#,
+    )
+    .unwrap();
+
+    let mut cmd = cargo_bin_cmd!("unicleaner");
+    let assert = cmd
+        .arg("--config")
+        .arg(&cfg)
+        .arg("clean")
+        .arg(fixture("zwsp.txt"))
+        .assert()
+        .code(1);
+
+    let out = assert.get_output().stdout.clone();
+    let expected = read_bytes(&fixture("zwsp.txt"));
+    assert_eq!(out, expected, "config report-only must not mutate stdout");
 }
 
 #[test]

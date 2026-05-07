@@ -116,8 +116,14 @@ impl CleanPolicy {
         self
     }
 
-    /// Add code points that should be treated as malicious in addition to
-    /// the built-in table.
+    /// Append code points to the denied list, in addition to the built-in
+    /// malicious table.
+    ///
+    /// Note: this *appends* — calling `with_denied([X])` twice with the
+    /// same code point produces two entries in `denied_code_points`. The
+    /// cleaner's lookup is short-circuit on the first match so duplicates
+    /// are harmless, but callers building a list incrementally should be
+    /// aware of the accumulating semantics.
     pub fn with_denied(mut self, code_points: impl IntoIterator<Item = u32>) -> Self {
         self.denied_code_points.extend(code_points);
         self

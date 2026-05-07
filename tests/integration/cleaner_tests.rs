@@ -171,6 +171,10 @@ fn clean_nfc_already_normalized_does_not_flip_modified() {
     assert_eq!(result.output.as_ref(), input);
     assert!(!result.modified);
     assert!(result.violations.is_empty());
+    match result.output {
+        Cow::Borrowed(s) => assert_eq!(s.as_ptr(), input.as_ptr()),
+        Cow::Owned(_) => panic!("NFC no-op input must not allocate"),
+    }
 }
 
 #[test]

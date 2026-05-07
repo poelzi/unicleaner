@@ -38,7 +38,7 @@ use crate::unicode::ranges::UnicodeRange;
 ///
 /// The `'a` lifetime ties [`Self::output`] to the original input string
 /// when the cleaner did not need to allocate.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CleanResult<'a> {
     /// The cleaned output. `Cow::Borrowed` when nothing changed, owned
     /// otherwise.
@@ -61,9 +61,11 @@ const INLINE_PATH: &str = "<inline>";
 /// no mutation occurred and NFC normalization is disabled (or the input
 /// was already in NFC).
 pub fn clean<'a>(input: &'a str, policy: &CleanPolicy) -> CleanResult<'a> {
-    // Fast pre-scan: if no code point matches and NFC is off, return
-    // borrowed without allocating.
-    if !policy.normalize_nfc && !needs_mutation(input, policy) {
+    // Single pre-scan covers both the no-NFC and NFC-already-normalized
+    // fast paths. NFC's `is_nfc` check is only invoked when the policy
+    // asks for it.
+    let dirty = needs_mutation(input, policy);
+    if !dirty && (!policy.normalize_nfc || unicode_normalization::is_nfc(input)) {
         return CleanResult {
             output: Cow::Borrowed(input),
             violations: Vec::new(),
@@ -86,17 +88,17 @@ pub fn clean<'a>(input: &'a str, policy: &CleanPolicy) -> CleanResult<'a> {
         for (byte_offset, ch) in body.char_indices() {
             let cp = ch as u32;
             match decide_action(cp, policy) {
-                Some((category, pattern_name, severity, message, action)) => {
+                Some(MatchedAction { pattern, action }) => {
                     let v = Violation::new(
                         PathBuf::from(INLINE_PATH),
                         line_idx + 1,
                         column,
                         byte_offset,
                         cp,
-                        pattern_name,
-                        category,
-                        severity,
-                        message,
+                        pattern.name.clone(),
+                        pattern.category,
+                        pattern.severity,
+                        pattern.description.clone(),
                     );
                     violations.push(v);
                     match action {
@@ -117,75 +119,103 @@ pub fn clean<'a>(input: &'a str, policy: &CleanPolicy) -> CleanResult<'a> {
 
     let mutated_chars = output.as_str() != input;
 
+    // NFC pass runs after stripping so the malicious-codepoint table's
+    // raw `u32` lookups stay valid (research.md Decision 3). We already
+    // know `is_nfc(input)` was either irrelevant or false to reach this
+    // branch; if `is_nfc(&output)` is also false, the `nfc()` collect is
+    // guaranteed to differ.
     let (final_output, nfc_changed) = if policy.normalize_nfc {
         use unicode_normalization::UnicodeNormalization;
-        use unicode_normalization::is_nfc;
-        if is_nfc(&output) {
+        if unicode_normalization::is_nfc(&output) {
             (output, false)
         } else {
-            let normalized: String = output.nfc().collect();
-            let changed = normalized != output;
-            (normalized, changed)
+            (output.nfc().collect::<String>(), true)
         }
     } else {
         (output, false)
     };
 
     let modified = mutated_chars || nfc_changed;
+    let output = if modified {
+        Cow::Owned(final_output)
+    } else {
+        Cow::Borrowed(input)
+    };
 
     CleanResult {
-        output: Cow::Owned(final_output),
+        output,
         violations,
         modified,
     }
 }
 
-/// Resolve the action the policy would take for `cp`. Returns
-/// `Some((category, pattern_name, severity, message, action))` if the
-/// policy reacts, else `None`.
+/// What [`decide_action`] returns when the policy reacts to a code point.
+struct MatchedAction {
+    /// The malicious-codepoint entry. For `denied_code_points` and
+    /// `deny_by_default` matches this is a synthetic, leaked pattern so
+    /// the caller can treat all matches uniformly.
+    pattern: &'static MaliciousPattern,
+    /// What the policy says to do with this code point.
+    action: CleanAction,
+}
+
+/// Resolve the action the policy would take for `cp`.
 ///
 /// Order of precedence: built-in malicious table → caller's
 /// `denied_code_points` → `deny_by_default` rule. Mirrors
 /// `detect_in_string_with_policy` so the cleaner walks the same code
 /// points as the detector.
-fn decide_action(
-    cp: u32,
-    policy: &CleanPolicy,
-) -> Option<(MaliciousCategory, String, Severity, String, CleanAction)> {
+fn decide_action(cp: u32, policy: &CleanPolicy) -> Option<MatchedAction> {
     if let Some(pattern) = pattern_for(cp) {
-        let action = policy.effective_action(pattern.category);
-        return Some((
-            pattern.category,
-            pattern.name.clone(),
-            pattern.severity,
-            pattern.description.clone(),
-            action,
-        ));
+        return Some(MatchedAction {
+            pattern,
+            action: policy.effective_action(pattern.category),
+        });
     }
 
     if policy.denied_code_points.contains(&cp) {
-        let action = policy.effective_action(MaliciousCategory::NonStandard);
-        return Some((
-            MaliciousCategory::NonStandard,
-            "explicitly-denied".to_string(),
-            Severity::Error,
-            "Code point is explicitly denied by configuration".to_string(),
-            action,
-        ));
+        return Some(MatchedAction {
+            pattern: explicitly_denied_pattern(),
+            action: policy.effective_action(MaliciousCategory::NonStandard),
+        });
     }
 
     if policy.deny_by_default && !is_allowed(cp, policy.allowed_ranges.as_deref()) {
-        let action = policy.effective_action(MaliciousCategory::NonStandard);
-        return Some((
-            MaliciousCategory::NonStandard,
-            "disallowed-code-point".to_string(),
-            Severity::Error,
-            "Code point is outside the configured allowlist (deny-by-default)".to_string(),
-            action,
-        ));
+        return Some(MatchedAction {
+            pattern: disallowed_pattern(),
+            action: policy.effective_action(MaliciousCategory::NonStandard),
+        });
     }
 
     None
+}
+
+/// Synthetic `MaliciousPattern` used for `denied_code_points` matches so
+/// the cleaner's hot loop can return `&'static MaliciousPattern`
+/// uniformly.
+fn explicitly_denied_pattern() -> &'static MaliciousPattern {
+    use std::sync::OnceLock;
+    static PATTERN: OnceLock<MaliciousPattern> = OnceLock::new();
+    PATTERN.get_or_init(|| MaliciousPattern {
+        name: "explicitly-denied".to_string(),
+        category: MaliciousCategory::NonStandard,
+        code_points: Vec::new(),
+        severity: Severity::Error,
+        description: "Code point is explicitly denied by configuration".to_string(),
+    })
+}
+
+/// Synthetic `MaliciousPattern` for `deny_by_default` matches.
+fn disallowed_pattern() -> &'static MaliciousPattern {
+    use std::sync::OnceLock;
+    static PATTERN: OnceLock<MaliciousPattern> = OnceLock::new();
+    PATTERN.get_or_init(|| MaliciousPattern {
+        name: "disallowed-code-point".to_string(),
+        category: MaliciousCategory::NonStandard,
+        code_points: Vec::new(),
+        severity: Severity::Error,
+        description: "Code point is outside the configured allowlist (deny-by-default)".to_string(),
+    })
 }
 
 /// Cheap pre-scan: return `true` iff at least one code point in `input`
@@ -212,10 +242,6 @@ fn is_allowed(cp: u32, allowed_ranges: Option<&[UnicodeRange]>) -> bool {
     }
     matches!(cp, 0x0009..=0x000D | 0x0020..=0x007E)
 }
-
-// Silence the `_` reuse — `MaliciousPattern` is a re-export aid for downstream code.
-#[allow(dead_code)]
-fn _assert_pattern_type(_p: &MaliciousPattern) {}
 
 #[cfg(test)]
 mod tests {
@@ -253,14 +279,22 @@ mod tests {
         let policy = CleanPolicy::strict()
             .with_action(MaliciousCategory::ZeroWidth, CleanAction::Replace('?'));
         let r = decide_action(0x200B, &policy).expect("ZWSP is malicious");
-        assert_eq!(r.4, CleanAction::Replace('?'));
+        assert_eq!(r.action, CleanAction::Replace('?'));
     }
 
     #[test]
     fn decide_action_falls_through_to_default() {
         let policy = CleanPolicy::lossy();
         let r = decide_action(0x200B, &policy).expect("ZWSP is malicious");
-        assert_eq!(r.4, CleanAction::Replace('\u{FFFD}'));
+        assert_eq!(r.action, CleanAction::Replace('\u{FFFD}'));
+    }
+
+    #[test]
+    fn decide_action_returns_synthetic_pattern_for_denied_list() {
+        let policy = CleanPolicy::strict().with_denied([0x00E9u32]);
+        let r = decide_action(0x00E9, &policy).expect("denied list match");
+        assert_eq!(r.pattern.name, "explicitly-denied");
+        assert_eq!(r.pattern.category, MaliciousCategory::NonStandard);
     }
 
     #[test]
@@ -276,5 +310,13 @@ mod tests {
         let input = "plain ascii";
         let r = clean(input, &CleanPolicy::strict());
         assert!(matches!(r.output, Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn nfc_already_normalized_input_borrows_when_clean() {
+        let input = "plain ascii";
+        let r = clean(input, &CleanPolicy::strict().with_nfc(true));
+        assert!(matches!(r.output, Cow::Borrowed(_)));
+        assert!(!r.modified);
     }
 }

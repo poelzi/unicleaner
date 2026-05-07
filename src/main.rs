@@ -54,6 +54,12 @@ fn main() {
             run_list_blocks(filter.as_deref());
             0
         }
+        Command::Clean {
+            path,
+            in_place,
+            policy,
+            nfc,
+        } => unicleaner::cli::clean::run(path, in_place, policy, nfc, args.config.as_deref()),
     };
 
     process::exit(exit_code);

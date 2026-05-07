@@ -10,6 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 tempfile = "3"
+unicode-normalization = "0.1"
 
 [dependencies.unicleaner]
 path = ".."
@@ -87,5 +88,11 @@ doc = false
 [[bin]]
 name = "fuzz_block_resolve"
 path = "fuzz_targets/fuzz_block_resolve.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_clean"
+path = "fuzz_targets/fuzz_clean.rs"
 test = false
 doc = false

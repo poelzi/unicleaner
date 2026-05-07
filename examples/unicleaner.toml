@@ -74,6 +74,36 @@ denied_characters = [
     0x202E,  # Right-to-left override (Trojan Source)
 ]
 
+# Cleaner Policy (optional)
+# Drives the `unicleaner clean` subcommand. When absent, the CLI falls back
+# to the preset selected by `--policy` (default: strict).
+#
+# Each `default_action` / `per_category.<NAME>` value is a CleanAction tagged
+# union with shape:
+#   { kind = "strip" }                        — drop the codepoint
+#   { kind = "replace", value = "?" }         — substitute with the given char
+#   { kind = "keep_with_mark" }               — keep but record a violation
+
+[cleaner]
+# Action used when no per-category override matches. Defaults to "strip"
+# if the field is omitted.
+default_action = { kind = "strip" }
+
+# Apply NFC normalization to the cleaned output. Default: false.
+normalize_nfc = false
+
+# Extra codepoints to treat as malicious in addition to the built-in table.
+# denied_code_points = [0x2028, 0x2029]
+
+# Per-category overrides. Keys: ZeroWidth, BidiOverride, Homoglyph,
+# ControlChar, NonStandard.
+[cleaner.per_category]
+# Replace bidi overrides with a visible marker so reviewers see the intent.
+BidiOverride = { kind = "replace", value = "?" }
+# Keep homoglyphs in place (e.g. teams that use Cyrillic identifiers
+# intentionally) but still log them.
+Homoglyph = { kind = "keep_with_mark" }
+
 # Notes:
 # - Rules are matched by priority (exact paths > specific globs > wildcards)
 # - File-specific rules override language presets

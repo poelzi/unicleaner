@@ -1,7 +1,7 @@
 //! Unicode range definitions and operations
 
 /// Represents a contiguous range of Unicode code points
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct UnicodeRange {
     pub start: u32,
     pub end: u32,

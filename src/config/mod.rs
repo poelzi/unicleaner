@@ -5,6 +5,7 @@ pub mod presets;
 pub mod rules;
 pub mod validation;
 
+use crate::cleaner::CleanPolicy;
 use crate::unicode::ranges::UnicodeRange;
 use rules::FileRule;
 use std::collections::HashMap;
@@ -22,6 +23,9 @@ pub struct Configuration {
     /// File-specific rules
     pub file_rules: Vec<FileRule>,
 
+    /// Optional cleaner policy from the `[cleaner]` block.
+    pub cleaner: Option<CleanPolicy>,
+
     /// Configuration file path (for reference)
     pub config_path: PathBuf,
 }
@@ -32,6 +36,7 @@ impl Default for Configuration {
             deny_by_default: true,
             language_presets: HashMap::new(),
             file_rules: Vec::new(),
+            cleaner: None,
             config_path: PathBuf::from("unicleaner.toml"),
         }
     }

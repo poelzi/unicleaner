@@ -29,6 +29,7 @@
 //! ```
 
 // Module declarations
+pub mod cleaner;
 pub mod cli;
 pub mod config;
 pub mod report;
@@ -36,6 +37,7 @@ pub mod scanner;
 pub mod unicode;
 
 // Re-export commonly used types
+pub use cleaner::{CleanAction, CleanPolicy, CleanResult, clean};
 pub use report::{ScanResult, Violation};
 
 /// Library version

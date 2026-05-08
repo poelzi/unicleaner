@@ -1,7 +1,16 @@
 //! Malicious Unicode pattern definitions
 
-/// Category of malicious Unicode pattern
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// Category of malicious Unicode pattern.
+///
+/// The `#[serde(rename_all = "PascalCase")]` attribute pins the JSON / TOML
+/// representation to the variant names so the cleaner's
+/// `[cleaner.per_category]` config block can spell `BidiOverride`,
+/// `ZeroWidth`, etc. directly. Renaming variants is therefore a breaking
+/// change to the on-disk format.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "PascalCase")]
 pub enum MaliciousCategory {
     ZeroWidth,
     BidiOverride,

@@ -1,6 +1,7 @@
 //! TOML configuration file parsing
 
 use crate::Error;
+use crate::cleaner::CleanPolicy;
 use crate::config::{Configuration, FileRule};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -18,6 +19,10 @@ struct ConfigFile {
 
     #[serde(default)]
     rules: Vec<RuleConfig>,
+
+    /// Optional cleaner policy block.
+    #[serde(default)]
+    cleaner: Option<CleanPolicy>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -78,6 +83,7 @@ pub fn parse_config(toml: &str, path: &Path) -> Result<Configuration, Error> {
         deny_by_default: config_file.global.deny_by_default,
         language_presets: HashMap::new(),
         file_rules: Vec::new(),
+        cleaner: config_file.cleaner,
         config_path: path.to_path_buf(),
     };
 

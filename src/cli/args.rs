@@ -110,6 +110,37 @@ pub enum Command {
         #[arg(value_name = "FILTER")]
         filter: Option<String>,
     },
+
+    /// Clean malicious Unicode from a file or stdin (writes to stdout by default)
+    Clean {
+        /// Input path. Use `-` to read from stdin. Defaults to stdin.
+        #[arg(value_name = "PATH")]
+        path: Option<PathBuf>,
+
+        /// Rewrite the file in place atomically (write to .tmp, fsync, rename)
+        #[arg(long)]
+        in_place: bool,
+
+        /// Cleaning policy preset
+        #[arg(long, value_enum, default_value = "strict")]
+        policy: CleanPolicyPreset,
+
+        /// Apply NFC normalization after stripping
+        #[arg(long)]
+        nfc: bool,
+    },
+}
+
+/// Policy preset selector for `unicleaner clean --policy`.
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum CleanPolicyPreset {
+    /// Strip every malicious code point.
+    Strict,
+    /// Replace every malicious code point with U+FFFD.
+    Lossy,
+    /// Record violations but do not mutate.
+    #[clap(name = "report-only")]
+    ReportOnly,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -309,6 +340,17 @@ impl Clone for Command {
             Command::ListPresets => Command::ListPresets,
             Command::ListBlocks { filter } => Command::ListBlocks {
                 filter: filter.clone(),
+            },
+            Command::Clean {
+                path,
+                in_place,
+                policy,
+                nfc,
+            } => Command::Clean {
+                path: path.clone(),
+                in_place: *in_place,
+                policy: *policy,
+                nfc: *nfc,
             },
         }
     }

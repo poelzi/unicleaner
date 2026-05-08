@@ -33,6 +33,12 @@ mod diff_tests;
 #[path = "integration/block_config_tests.rs"]
 mod block_config_tests;
 
+#[path = "integration/cleaner_tests.rs"]
+mod cleaner_tests;
+
+#[path = "integration/cli_clean_tests.rs"]
+mod cli_clean_tests;
+
 #[path = "contract/exit_codes.rs"]
 mod exit_codes;
 

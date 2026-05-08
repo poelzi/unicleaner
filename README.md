@@ -341,6 +341,7 @@ All changed files are safe to merge!
 ### Commands
 
 - `scan [PATH]` - Scan files for malicious Unicode (default command)
+- `clean [PATH]` - Sanitize a file or stdin and write to stdout (or `--in-place`)
 - `init [FILE]` - Generate a default configuration file
 - `list-presets` - Show available language presets
 
@@ -359,6 +360,74 @@ All changed files are safe to merge!
 - `--diff` - Scan only files changed in Git (requires Git repository)
 - `-j, --jobs <N>` - Number of parallel threads (default: number of CPUs)
 - `--encoding <ENC>` - Force specific encoding: utf8, utf16-le, utf16-be, utf32-le, utf32-be
+
+### Clean Flags
+
+- `--in-place` - Atomically rewrite the input file (write to `.tmp`, fsync, rename)
+- `--policy <PRESET>` - Policy preset: `strict` (strip), `lossy` (replace with U+FFFD), `report-only`
+- `--nfc` - Apply NFC normalization to the cleaned output
+
+## Cleaning
+
+Beyond detection, unicleaner can sanitize strings via the `clean` library
+entry point and matching CLI subcommand.
+
+**Library**:
+
+```rust
+use unicleaner::{clean, CleanPolicy};
+
+let result = clean("hi\u{200B}there", &CleanPolicy::strict());
+assert_eq!(result.output.as_ref(), "hithere");
+assert!(result.modified);
+assert_eq!(result.violations.len(), 1);
+```
+
+The clean-input fast path is zero-allocation: the result's `output`
+borrows from the input when no codepoint matches the policy and NFC is
+disabled.
+
+```rust
+use std::borrow::Cow;
+use unicleaner::{clean, CleanPolicy};
+
+let result = clean("plain ascii", &CleanPolicy::strict());
+assert!(matches!(result.output, Cow::Borrowed(_)));
+```
+
+Per-category tuning:
+
+```rust
+use unicleaner::{clean, CleanAction, CleanPolicy};
+use unicleaner::unicode::malicious::MaliciousCategory;
+
+let policy = CleanPolicy::strict()
+    .with_action(MaliciousCategory::BidiOverride, CleanAction::Replace('?'))
+    .with_action(MaliciousCategory::Homoglyph, CleanAction::KeepWithMark);
+```
+
+**CLI**:
+
+```bash
+# Default: write cleaned content to stdout, source file untouched
+unicleaner clean src/foo.rs
+
+# Diff against the original
+unicleaner clean src/foo.rs | diff src/foo.rs -
+
+# In-place atomic rewrite
+unicleaner clean --in-place src/foo.rs
+
+# Policy presets
+unicleaner clean --policy lossy src/foo.rs        # replace with U+FFFD
+unicleaner clean --policy report-only src/foo.rs  # no mutation; exit 1 if found
+
+# Reuse an existing config
+unicleaner --config unicleaner.toml clean src/foo.rs
+```
+
+A configuration file may carry an optional `[cleaner]` block — see
+`examples/unicleaner.toml`.
 
 ## Exit Codes
 

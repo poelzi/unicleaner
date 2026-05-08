@@ -85,8 +85,7 @@ pub fn clean<'a>(input: &'a str, policy: &CleanPolicy) -> CleanResult<'a> {
             None => (line, false),
         };
 
-        let mut column: usize = 1;
-        for (byte_offset, ch) in body.char_indices() {
+        for (column, (byte_offset, ch)) in (1usize..).zip(body.char_indices()) {
             let cp = ch as u32;
             match decide_action(cp, policy) {
                 Some(MatchedAction { pattern, action }) => {
@@ -110,7 +109,6 @@ pub fn clean<'a>(input: &'a str, policy: &CleanPolicy) -> CleanResult<'a> {
                 }
                 None => output.push(ch),
             }
-            column += 1;
         }
 
         if has_newline {
@@ -319,5 +317,84 @@ mod tests {
         let r = clean(input, &CleanPolicy::strict().with_nfc(true));
         assert!(matches!(r.output, Cow::Borrowed(_)));
         assert!(!r.modified);
+    }
+
+    #[test]
+    fn clean_handles_explicitly_denied_codepoint() {
+        let policy = CleanPolicy::strict().with_denied([0x00E9u32]);
+        let r = clean("caf\u{00E9}", &policy);
+        assert_eq!(r.output.as_ref(), "caf");
+        assert_eq!(r.violations.len(), 1);
+        assert_eq!(r.violations[0].code_point, 0x00E9);
+        assert_eq!(r.violations[0].pattern_name, "explicitly-denied");
+    }
+
+    #[test]
+    fn clean_deny_by_default_strips_outside_ranges() {
+        let policy = CleanPolicy::strict()
+            .with_allowed_ranges(vec![UnicodeRange::new(0x0020, 0x007E)], true);
+        let r = clean("hello\u{00E9}world", &policy);
+        assert!(!r.output.contains('\u{00E9}'));
+        assert!(r.violations.iter().any(|v| v.code_point == 0x00E9));
+        assert_eq!(r.violations[0].pattern_name, "disallowed-code-point");
+    }
+
+    #[test]
+    fn clean_deny_by_default_default_allowlist_passes_ascii() {
+        let policy = CleanPolicy::strict()
+            // No ranges configured → fallback safe-ASCII allowlist applies.
+            .with_allowed_ranges(Vec::new(), true);
+        // Hack: with_allowed_ranges sets allowed_ranges = Some(empty),
+        // not None, so the fallback branch isn't hit. Use deny_by_default
+        // = true with allowed_ranges = None directly.
+        let policy = CleanPolicy {
+            deny_by_default: true,
+            allowed_ranges: None,
+            ..policy
+        };
+        let r = clean("hello world", &policy);
+        // All printable ASCII → no violations.
+        assert!(r.violations.is_empty());
+        assert!(matches!(r.output, Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn needs_mutation_deny_by_default_with_ranges() {
+        let policy = CleanPolicy::strict()
+            .with_allowed_ranges(vec![UnicodeRange::new(0x0061, 0x007A)], true);
+        // 'A' (0x0041) outside allowed [a-z] range → flagged.
+        assert!(needs_mutation("A", &policy));
+        assert!(!needs_mutation("abc", &policy));
+    }
+
+    #[test]
+    fn explicitly_denied_pattern_is_singleton() {
+        let p1 = explicitly_denied_pattern();
+        let p2 = explicitly_denied_pattern();
+        assert!(std::ptr::eq(p1, p2));
+        assert_eq!(p1.name, "explicitly-denied");
+        assert_eq!(p1.severity, Severity::Error);
+    }
+
+    #[test]
+    fn disallowed_pattern_is_singleton() {
+        let p1 = disallowed_pattern();
+        let p2 = disallowed_pattern();
+        assert!(std::ptr::eq(p1, p2));
+        assert_eq!(p1.name, "disallowed-code-point");
+        assert_eq!(p1.severity, Severity::Error);
+    }
+
+    #[test]
+    fn is_allowed_falls_back_to_safe_ascii_when_no_ranges() {
+        assert!(is_allowed(0x0041, None)); // 'A'
+        assert!(!is_allowed(0x00E9, None)); // 'é'
+    }
+
+    #[test]
+    fn is_allowed_uses_provided_ranges() {
+        let ranges = [UnicodeRange::new(0x0061, 0x007A)];
+        assert!(is_allowed(0x0061, Some(&ranges)));
+        assert!(!is_allowed(0x0041, Some(&ranges)));
     }
 }

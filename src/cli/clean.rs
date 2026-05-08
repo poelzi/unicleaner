@@ -184,3 +184,114 @@ fn atomic_write(target: &Path, bytes: &[u8]) -> std::io::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cleaner::{CleanAction, CleanPolicy};
+    use crate::unicode::malicious::MaliciousCategory;
+
+    #[test]
+    fn resolve_policy_preset_strict() {
+        let p = resolve_policy(CleanPolicyPreset::Strict, false, None).unwrap();
+        assert_eq!(p.default_action, CleanAction::Strip);
+        assert!(!p.normalize_nfc);
+    }
+
+    #[test]
+    fn resolve_policy_preset_lossy_with_nfc() {
+        let p = resolve_policy(CleanPolicyPreset::Lossy, true, None).unwrap();
+        assert_eq!(p.default_action, CleanAction::Replace('\u{FFFD}'));
+        assert!(p.normalize_nfc);
+    }
+
+    #[test]
+    fn resolve_policy_preset_report_only() {
+        let p = resolve_policy(CleanPolicyPreset::ReportOnly, false, None).unwrap();
+        assert_eq!(p.default_action, CleanAction::KeepWithMark);
+    }
+
+    #[test]
+    fn is_report_only_policy_detects_keep_with_mark_default() {
+        assert!(is_report_only_policy(&CleanPolicy::report_only()));
+    }
+
+    #[test]
+    fn is_report_only_policy_rejects_strict() {
+        assert!(!is_report_only_policy(&CleanPolicy::strict()));
+    }
+
+    #[test]
+    fn is_report_only_policy_rejects_mixed_overrides() {
+        // KeepWithMark default but one override that mutates → not report-only.
+        let p = CleanPolicy::report_only()
+            .with_action(MaliciousCategory::ZeroWidth, CleanAction::Strip);
+        assert!(!is_report_only_policy(&p));
+    }
+
+    #[test]
+    fn is_report_only_policy_accepts_all_keep_overrides() {
+        let p = CleanPolicy::report_only()
+            .with_action(MaliciousCategory::ZeroWidth, CleanAction::KeepWithMark);
+        assert!(is_report_only_policy(&p));
+    }
+
+    #[test]
+    fn resolve_policy_uses_preset_without_config() {
+        let p = resolve_policy(CleanPolicyPreset::Lossy, false, None).unwrap();
+        assert_eq!(p.default_action, CleanAction::Replace('\u{FFFD}'));
+    }
+
+    #[test]
+    fn resolve_policy_falls_back_when_config_lacks_cleaner_block() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let cfg = dir.path().join("unicleaner.toml");
+        std::fs::write(&cfg, "[global]\ndeny_by_default = false\n").unwrap();
+
+        let p = resolve_policy(CleanPolicyPreset::Lossy, false, Some(&cfg)).unwrap();
+        // No `[cleaner]` block → preset wins.
+        assert_eq!(p.default_action, CleanAction::Replace('\u{FFFD}'));
+    }
+
+    #[test]
+    fn resolve_policy_uses_config_cleaner_block() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let cfg = dir.path().join("unicleaner.toml");
+        std::fs::write(
+            &cfg,
+            "[cleaner]\ndefault_action = { kind = \"keep_with_mark\" }\n",
+        )
+        .unwrap();
+
+        let p = resolve_policy(CleanPolicyPreset::Strict, false, Some(&cfg)).unwrap();
+        assert_eq!(p.default_action, CleanAction::KeepWithMark);
+    }
+
+    #[test]
+    fn resolve_policy_errors_on_invalid_config() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let cfg = dir.path().join("nope.toml");
+        // File doesn't exist → expect an exit-code error.
+        let r = resolve_policy(CleanPolicyPreset::Strict, false, Some(&cfg));
+        assert_eq!(r.unwrap_err(), exit_codes::ERROR);
+    }
+
+    #[test]
+    fn atomic_write_replaces_file_contents() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let target = dir.path().join("data.txt");
+        std::fs::write(&target, b"original\n").unwrap();
+
+        atomic_write(&target, b"replaced\n").unwrap();
+        assert_eq!(std::fs::read(&target).unwrap(), b"replaced\n");
+    }
+
+    #[test]
+    fn atomic_write_errors_on_missing_target() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let target = dir.path().join("does-not-exist.txt");
+        // metadata() fails because the target doesn't exist yet.
+        let err = atomic_write(&target, b"x").unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::NotFound);
+    }
+}

@@ -94,7 +94,7 @@ fn calculate_priority(pattern: &str) -> usize {
 
 /// Sort rules by priority (highest first)
 pub fn sort_rules_by_priority(rules: &mut [FileRule]) {
-    rules.sort_by(|a, b| b.priority.cmp(&a.priority));
+    rules.sort_by_key(|r| std::cmp::Reverse(r.priority));
 }
 
 /// Find the first matching rule for a file

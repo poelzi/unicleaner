@@ -47,7 +47,8 @@ pub struct CleanResult<'a> {
     pub violations: Vec<Violation>,
     /// `true` iff the cleaner mutated the input. `false` for
     /// [`CleanPolicy::report_only`] regardless of how many violations were
-    /// recorded.
+    /// recorded, unless `normalize_nfc` is enabled and the input was not
+    /// already in NFC form.
     pub modified: bool,
 }
 

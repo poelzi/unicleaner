@@ -95,6 +95,14 @@ normalize_nfc = false
 # Extra codepoints to treat as malicious in addition to the built-in table.
 # denied_code_points = [0x2028, 0x2029]
 
+# Deny-by-default: when true, any codepoint outside `allowed_ranges` (and
+# outside the built-in malicious table) is treated as a violation.
+# deny_by_default = false
+
+# Allowlist ranges used only when `deny_by_default = true`. Each entry is
+# an inclusive [start, end] pair.
+# allowed_ranges = [[0x0020, 0x007E]]
+
 # Per-category overrides. Keys: ZeroWidth, BidiOverride, Homoglyph,
 # ControlChar, NonStandard.
 [cleaner.per_category]

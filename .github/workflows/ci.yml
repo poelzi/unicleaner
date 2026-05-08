@@ -10,7 +10,12 @@ jobs:
   nix-ci:
     name: Nix Build & Check (${{ matrix.system }})
     runs-on: ${{ matrix.os }}
-    environment: CI
+    # Use the CI environment only for push events on main. Pull requests
+    # (especially dependabot's) don't satisfy the environment's branch
+    # policy, so they're allowed to run without it. Steps that need the
+    # secrets gated by the environment already handle the empty-token
+    # case (cachix `skipPush`, codecov `fail_ci_if_error: false`).
+    environment: ${{ github.event_name == 'push' && 'CI' || '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +59,12 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    environment: CI
+    # Use the CI environment only for push events on main. Pull requests
+    # (especially dependabot's) don't satisfy the environment's branch
+    # policy, so they're allowed to run without it. Steps that need the
+    # secrets gated by the environment already handle the empty-token
+    # case (cachix `skipPush`, codecov `fail_ci_if_error: false`).
+    environment: ${{ github.event_name == 'push' && 'CI' || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -101,7 +111,12 @@ jobs:
   fuzz:
     name: Fuzz Testing (Quick)
     runs-on: ubuntu-latest
-    environment: CI
+    # Use the CI environment only for push events on main. Pull requests
+    # (especially dependabot's) don't satisfy the environment's branch
+    # policy, so they're allowed to run without it. Steps that need the
+    # secrets gated by the environment already handle the empty-token
+    # case (cachix `skipPush`, codecov `fail_ci_if_error: false`).
+    environment: ${{ github.event_name == 'push' && 'CI' || '' }}
     if: github.event_name == 'push'
     strategy:
       fail-fast: false

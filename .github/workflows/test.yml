@@ -14,7 +14,9 @@ jobs:
   test:
     name: Test - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    environment: CI
+    # See ci.yml for rationale: skip the env on pull_request triggers
+    # so dependabot / fork PRs aren't blocked by branch protection.
+    environment: ${{ github.event_name == 'push' && 'CI' || '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -76,7 +78,9 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    environment: CI
+    # See ci.yml for rationale: skip the env on pull_request triggers
+    # so dependabot / fork PRs aren't blocked by branch protection.
+    environment: ${{ github.event_name == 'push' && 'CI' || '' }}
 
     steps:
       - uses: actions/checkout@v4
